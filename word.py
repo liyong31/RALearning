@@ -2,6 +2,7 @@ from fractions import Fraction
 from typing import List, Set, Dict, Union, Tuple
 
 from typing import Callable
+from unittest import result
 
 # -------------------------------
 #      LETTERS & SEQUENCES
@@ -59,11 +60,29 @@ class LetterSequence:
         self.letters.append(letter)
     
     def remove(self, indices: Set[int]):
+        # create a new LetterSequence without letters at the given indices
         result = []
-        for i in len(self.letters):
+        for i in range(len(self.letters)):
             if not (i in indices):
                 result.append(self.letters[i])
         return LetterSequence(result)
+    
+    def __len__(self):
+        return len(self.letters)
+
+    # create a new LetterSequence by appending another LetterSequence
+    def append_sequence(self, other: 'LetterSequence'):
+        if len(other.letters) == 0:
+            return self
+        if len(self.letters) == 0:
+            self.letter_type = other.letter_type
+        
+        if other.letter_type != self.letter_type:
+            raise ValueError(
+                f"Cannot append sequence of type {other.letter_type} "
+                f"to a sequence of type {self.letter_type}"
+            )
+        return LetterSequence(self.letters + other.letters)
             
 
     def __repr__(self):
