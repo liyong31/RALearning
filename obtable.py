@@ -1,9 +1,51 @@
 # ...existing code...
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Any, Callable, Optional
-from word import LetterSequence, Letter
+from word import LetterSequence, Letter, Numeric, is_same_word_type
 import word
 
+'''
+So, a table is organised in rows and columns.
+Each row is labelled by a pair (prefix, sequence) and contains a vector of entries.
+Each column is labelled by a suffix sequence and maps column to a position in the vector of entries.
+The entry at (row, column) indicates whether the concatenation
+
+'''
+
+class TableRow:
+    def __init__(self, prefix: LetterSequence, memorable: LetterSequence, comp: Callable[[Numeric, Numeric], bool]):
+        self.prefix = prefix
+        self.memorable = memorable
+        self.comp = comp
+        self.entries: List[bool] = []
+
+    def append_entry(self, value: bool):
+        self.entries.append(value)
+        
+    def __eq__(self, value):
+        if not isinstance(value, TableRow):
+            raise ValueError("Can only compare with another TableRow")
+        ## only compare the memorable words
+        '''
+        u equiv v if 
+        self.memorable \sim_R value.memorable
+        compute bijective mapping between memorable letters
+        for all suffixes w, table[prefix, u][w] == table[prefix, v][w]
+        '''
+        if len(self.memorable) != len(value.memorable):
+            return False
+        # build mapping
+        if is_same_word_type(self.memorable, value.memorable, self.comp) is False:
+            return False
+        # build mapping between letters
+        # bijective = self.memorable.get_bijective_mapping_dense(value.memorable, self.comp)
+        # mapped_prefix = LetterSequence(self.memorable.letters.map(bijective))
+        
+        return self.prefix == value.prefix and self.memorable == value.memorable
+
+    def __repr__(self):
+        return f"({self.prefix}, {self.memorable})"
+    
 class ObservationTable:
     def __init__(self):
         # Each row label is a pair (prefix, sequence) as requested.

@@ -67,6 +67,45 @@ class LetterSequence:
                 result.append(self.letters[i])
         return LetterSequence(result)
     
+    '''
+    we return a function that can map any letter to its corresponding letter
+    '''
+    def get_bijective_mapping_dense(self, other: 'LetterSequence') -> Callable[[Letter], Letter]:
+        if self.letter_type != other.letter_type:
+            raise ValueError("Cannot compute bijective mapping between different letter types")
+        if len(self.letters) != len(other.letters):
+            raise ValueError("Cannot compute bijective mapping between sequences of different lengths")
+        # sort both sequences, not in place
+        self_sorted = sorted(self.letters, key=lambda x: x.value)
+        other_sorted = sorted(other.letters, key=lambda x: x.value)
+
+        def mapper(c: Letter) -> Letter:
+            if c.letter_type != self.letter_type:
+                raise ValueError("Input letter has wrong type for this mapping")
+            v = c.value
+            v0 = self_sorted[0].value
+            v_last = self_sorted[-1].value
+
+            if v < v0:
+                mapped_value = (v - v0) + other_sorted[0].value
+            elif v >= v_last:
+                mapped_value = (v - v_last) + other_sorted[-1].value
+            else:
+                # find the interval in which v lies and linearly interpolate
+                mapped_value = other_sorted[-1].value
+                for i in range(len(self_sorted) - 1):
+                    vi = self_sorted[i].value
+                    vj = self_sorted[i + 1].value
+                    if vi <= v < vj:
+                        oi = other_sorted[i].value
+                        oj = other_sorted[i + 1].value
+                        mapped_value = (v - vi) * (oj - oi) / (vj - vi) + oi
+                        break
+
+            return Letter(mapped_value, other.letter_type)
+
+        return mapper
+
     def __len__(self):
         return len(self.letters)
 

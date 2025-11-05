@@ -97,7 +97,7 @@ def get_example_ra_1():
 
 def get_example_ra_2():
     """
-    accept when the word is the form of abab
+    accept when the word is the form of abab where a != b
     """
     RA = ra.RegisterAutomaton()
 
@@ -303,46 +303,55 @@ if __name__ == "__main__":
 # All ℕ type
 seqA = word.LetterSequence(
     [
-        word.Letter(1, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
-        word.Letter(9, word.LetterType.NAT),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
+        word.Letter(9, word.LetterType.REAL),
     ]
 )
 
 seqB = word.LetterSequence(
     [
-        word.Letter(3, word.LetterType.NAT),
-        word.Letter(7, word.LetterType.NAT),
-        word.Letter(7, word.LetterType.NAT),
-        word.Letter(10, word.LetterType.NAT),
+        word.Letter(3, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL),
+        word.Letter(10, word.LetterType.REAL),
+    ]
+)
+
+seqK = word.LetterSequence(
+    [
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(8, word.LetterType.REAL),
+        word.Letter(8, word.LetterType.REAL),
+        word.Letter(10, word.LetterType.REAL),
     ]
 )
 
 seqC = word.LetterSequence(
     [
-        word.Letter(2, word.LetterType.NAT),
-        word.Letter(2, word.LetterType.NAT),
-        word.Letter(2, word.LetterType.NAT),
-        word.Letter(2, word.LetterType.NAT),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
     ]
 )
 
 seqD = word.LetterSequence(
     [
-        word.Letter(9, word.LetterType.NAT),
-        word.Letter(1, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
+        word.Letter(9, word.LetterType.REAL),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
     ]
 )
 
 seqE = word.LetterSequence(
     [
-        word.Letter(1, word.LetterType.NAT),
-        word.Letter(9, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
-        word.Letter(5, word.LetterType.NAT),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(9, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
+        word.Letter(5, word.LetterType.REAL),
     ]
 )
 
@@ -352,12 +361,17 @@ print(seqA, seqB, seqC, seqD, seqE)
 
 print("### Using comp_id (equality only) ###")
 print("seqA vs seqB:", word.is_same_word_type(seqA, seqB, word.comp_id))
+
+    
 print("seqA vs seqC:", word.is_same_word_type(seqA, seqC, word.comp_id))
 print("seqA vs seqD:", word.is_same_word_type(seqA, seqD, word.comp_id))
 print("seqA vs seqE:", word.is_same_word_type(seqA, seqE, word.comp_id))
 
 print("\n### Using comp_lt (order only) ###")
 print("seqA vs seqB:", word.is_same_word_type(seqA, seqB, word.comp_lt))
+if word.is_same_word_type(seqA, seqB, word.comp_id):
+    bijective = seqA.get_bijective_mapping_dense(seqB)
+    print("  Bijective mapping (A -> B):", list(map(bijective, seqK.letters)))
 print("seqA vs seqC:", word.is_same_word_type(seqA, seqC, word.comp_lt))
 print("seqA vs seqD:", word.is_same_word_type(seqA, seqD, word.comp_lt))
 print("seqA vs seqE:", word.is_same_word_type(seqA, seqE, word.comp_lt))
