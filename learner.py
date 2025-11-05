@@ -97,7 +97,7 @@ def get_example_ra_1():
 
 def get_example_ra_2():
     """
-    accept when the word ends in abab
+    accept when the word is the form of abab
     """
     RA = ra.RegisterAutomaton()
 
@@ -199,6 +199,8 @@ def get_example_ra_2():
 
     # go to sink state
     RA.add_transition(5, tau_nat_1, {0}, 3)
+    # RA.add_transition(5, tau_nat_1, {0}, 3)
+
 
     return RA
 
@@ -207,6 +209,48 @@ if __name__ == "__main__":
 
     RA = get_example_ra_2()
     print(RA)
+    
+    seqA = word.LetterSequence(
+    [
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(1.5, word.LetterType.REAL),
+        word.Letter(1.2, word.LetterType.REAL)
+    ]
+    )
+    
+    seqB = word.LetterSequence(
+    [
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL),
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL)
+    ]
+    )
+    
+    seqC = word.LetterSequence(
+    [
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL),
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL),
+        word.Letter(7, word.LetterType.REAL)
+    ]
+    )
+    
+    seqD = word.LetterSequence(
+    [
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(6, word.LetterType.REAL),
+        word.Letter(6, word.LetterType.REAL)
+    ]
+    )
+    
+    print("word:", seqA, RA.is_accepted(seqA, word.comp_id))
+    print("word:", seqB, RA.is_accepted(seqB, word.comp_id))
+    print("word:", seqC, RA.is_accepted(seqC, word.comp_id))
+    print("word:", seqD, RA.is_accepted(seqD, word.comp_id))
     
     targetRA = get_example_ra_1()
     

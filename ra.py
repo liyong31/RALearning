@@ -25,6 +25,16 @@ class Transition:
         self.tau = tau
         self.E = E
         self.target = target
+        
+    def __eq__(self, value):
+        if not isinstance(value, Transition):
+            raise ValueError("Can only compare with another Transition")
+        return (
+            self.source == value.source and
+            self.tau == value.tau and
+            self.E == value.E and
+            self.target == value.target
+        )
 
     def __repr__(self):
         return f"({self.source}, {self.tau}, {self.E}, {self.target})"
@@ -41,7 +51,20 @@ class Location:
     def add_transition(self, p: int, tau: word.LetterSequence, E: Set[int], q: int):
         if p != self.id:
             raise ValueError("Transition with source {p} added to location {self.id}")
+        # check for duplicate transitions?
+        for t in self.transitions:
+            if t == Transition(p, tau, E, q):
+                # raise  ValueError("Duplicate transition")
+                return # already exists
         self.transitions.append(Transition(p, tau, E, q))
+        
+    def __eq__(self, value):
+        if not isinstance(value, Location):
+            raise ValueError("Can only compare with another Location")
+        # only compare the id
+        return (
+            self.id == value.id
+        )
 
     def __repr__(self):
         result = ""
