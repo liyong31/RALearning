@@ -1,213 +1,15 @@
+import example
 import word
-import ra
-# import obtable
-
-
-# -------------------------------
-#           EXAMPLE
-# -------------------------------
-
-def get_example_ra_1():
-    """
-    1. a1 < a2, then ai < a1 or ai > a2 for all i >=3
-    2. a1 > a2, then a2 < ai < a1 for all i >=3
-    """
-    targetRA = ra.RegisterAutomaton()
-    targetRA.add_location(0, "q0", accepting=False)
-    targetRA.add_location(1, "q1", accepting=False)
-    targetRA.add_location(2, "q2", accepting=True)
-    targetRA.add_location(3, "q3", accepting=True)
-    targetRA.add_location(4, "q4", accepting=False)
-    targetRA.set_initial(0)
-    
-    tau_nat_1 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL)
-        ])
-    tau_nat_2 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(2, word.LetterType.REAL)
-        ])
-    tau_nat_3 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(4, word.LetterType.REAL)
-        ])
-    tau_nat_4 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(2, word.LetterType.REAL),
-            word.Letter(2.5, word.LetterType.REAL)
-        ])
-    tau_nat_5 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(4, word.LetterType.REAL),
-            word.Letter(2.5, word.LetterType.REAL)
-        ])
-    tau_nat_6 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(4, word.LetterType.REAL),
-            word.Letter(5, word.LetterType.REAL)
-        ])
-    tau_nat_7 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(2, word.LetterType.REAL),
-            word.Letter(1, word.LetterType.REAL)
-        ])
-    tau_nat_8 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(2, word.LetterType.REAL),
-            word.Letter(4, word.LetterType.REAL)
-        ])
-    # jump to state 4
-    tau_nat_9 = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(4, word.LetterType.REAL),
-            word.Letter(3.5, word.LetterType.REAL)
-        ])
-
-    tau_nat_10 = word.LetterSequence(   
-        [
-            word.Letter(3, word.LetterType.REAL),
-            word.Letter(3, word.LetterType.REAL)
-        ])
-    targetRA.add_transition(0, tau_nat_1, {}, 1)
-    targetRA.add_transition(1, tau_nat_2, {}, 2)
-    targetRA.add_transition(1, tau_nat_3, {}, 3)
-    targetRA.add_transition(1, tau_nat_10, {0,1}, 4)
-    targetRA.add_transition(2, tau_nat_4, {2}, 2)
-    targetRA.add_transition(3, tau_nat_5, {2}, 3)
-    targetRA.add_transition(3, tau_nat_6, {2}, 3)
-    targetRA.add_transition(2, tau_nat_7, {0,1,2}, 4)
-    targetRA.add_transition(2, tau_nat_8, {0,1,2}, 4)
-    targetRA.add_transition(3, tau_nat_9, {0,1,2}, 4)
-
-    tau_nat_true = word.LetterSequence(
-        [
-            word.Letter(3, word.LetterType.REAL)
-        ])
-    targetRA.add_transition(4, tau_nat_true, {0}, 4)
-    return targetRA
-
-def get_example_ra_2():
-    """
-    accept when the word is the form of abab where a != b
-    """
-    RA = ra.RegisterAutomaton()
-
-    RA.add_location(0, "ɛ", accepting=False)
-    RA.add_location(1, "1", accepting=False)
-    RA.add_location(2, "12", accepting=False)
-    RA.add_location(3, "11", accepting=False) # sink state
-    RA.add_location(4, "121", accepting=False)
-    RA.add_location(5, "1212", accepting=True)
-
-    RA.set_initial(0)
-    
-    tau_nat_1 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(0, tau_nat_1, {}, 1)
-
-    tau_nat_11 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(1, tau_nat_11, {0,1}, 3)
-    # RA.add_transition(3, tau_nat_1, {0}, 3)
-    # tau_nat_2 = word.LetterSequence(
-    #     [
-    #         word.Letter(1,  word.LetterType.REAL)
-    #     ]
-    # )
-    RA.add_transition(3, tau_nat_1, {0}, 3)
-
-
-    
-    tau_nat_12 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(1, tau_nat_12, {}, 2)
-
-    
-    tau_nat_121 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL)
-        ]
-    )
-    tau_nat_122 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL)
-        ]
-    )
-    tau_nat_123 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(3,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(2, tau_nat_121, {}, 4)
-    RA.add_transition(2, tau_nat_122, {0,1,2}, 3)
-    RA.add_transition(2, tau_nat_123, {0,1,2}, 3)
-
-    
-    tau_nat_1212 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(4, tau_nat_1212, {0, 1, 2, 3}, 5)
-    tau_nat_1211 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(4, tau_nat_1211, {0, 1, 2, 3}, 3)
-    tau_nat_1213 = word.LetterSequence(
-        [
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(2,  word.LetterType.REAL),
-            word.Letter(1,  word.LetterType.REAL),
-            word.Letter(3,  word.LetterType.REAL)
-        ]
-    )
-    RA.add_transition(4, tau_nat_1213, {0, 1, 2, 3}, 3)
-
-    # go to sink state
-    RA.add_transition(5, tau_nat_1, {0}, 3)
-    # RA.add_transition(5, tau_nat_1, {0}, 3)
-
-
-    return RA
+from word import Letter, LetterSequence
+from ra import RegisterAutomaton
+from typing import List, Tuple, Callable, Dict, Any
 
 if __name__ == "__main__":
     
 
-    RA = get_example_ra_2()
+    RA = example.get_example_ra_2()
+    print("================== example 2 ==================")
+
     print(RA)
     
     seqA = word.LetterSequence(
@@ -252,8 +54,9 @@ if __name__ == "__main__":
     print("word:", seqC, RA.is_accepted(seqC, word.comp_id))
     print("word:", seqD, RA.is_accepted(seqD, word.comp_id))
     
-    targetRA = get_example_ra_1()
-    
+    targetRA = example.get_example_ra_1()
+    print("================== example 1 ==================")
+
     print(targetRA)
     
     seq1 = word.LetterSequence(
@@ -297,6 +100,55 @@ if __name__ == "__main__":
     print("word:", seq2, targetRA.is_accepted(seq2, word.comp_lt))
     print("word:", seq3, targetRA.is_accepted(seq3, word.comp_lt))
     print("word:", seq4, targetRA.is_accepted(seq4, word.comp_id))
+    
+    
+    targetRA = example.get_example_ra_3()
+    print("================== example 3 ==================")
+    print(targetRA)
+    
+    seqRA1 = word.LetterSequence(
+    [
+        word.Letter(3, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(4, word.LetterType.REAL),
+    ]
+    )
+
+    print("word:", seqRA1, targetRA.is_accepted(seqRA1, word.comp_lt))
+
+    
+    seqRA1 = word.LetterSequence(
+    [
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(2, word.LetterType.REAL),
+        word.Letter(3, word.LetterType.REAL),
+        word.Letter(4, word.LetterType.REAL),
+    ]
+    )
+    print("word:", seqRA1, targetRA.is_accepted(seqRA1, word.comp_lt))
+
+    
+    seqRA1 = word.LetterSequence(
+    [
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(3, word.LetterType.REAL),
+        word.Letter(4, word.LetterType.REAL),
+    ]
+    )
+    print("word:", seqRA1, targetRA.is_accepted(seqRA1, word.comp_lt))
+    
+    seqRA1 = word.LetterSequence(
+    [
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(1, word.LetterType.REAL),
+        word.Letter(1, word.LetterType.REAL)
+    ]
+    )
+    print("word:", seqRA1, targetRA.is_accepted(seqRA1, word.comp_lt))
+
+    
 
     # --- create some sequences for testing ---
 
