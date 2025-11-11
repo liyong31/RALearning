@@ -8,6 +8,7 @@ from unittest import result
 #      LETTERS & SEQUENCES
 # -------------------------------
 
+Numeric = Union[int, float, Fraction]
 
 class LetterType:
     NAT = "N"  # Natural numbers
@@ -15,7 +16,7 @@ class LetterType:
     REAL = "R"  # Real numbers
 
 class Letter:
-    def __init__(self, value: Union[int, float, Fraction], letter_type: str):
+    def __init__(self, value: Numeric, letter_type: str):
         if letter_type not in {LetterType.NAT, LetterType.RAT, LetterType.REAL}:
             raise ValueError("letter_type must be one of N, Q, R")
 
@@ -35,7 +36,16 @@ class Letter:
 
         self.value = value
         self.letter_type = letter_type
+        
+    def __eq__(self, other):
+        if not isinstance(other, Letter):
+            return False
+        return self.letter_type == other.letter_type and self.value == other.value
 
+    def __hash__(self):
+        # use tuple of (value, type) and delegate to built-in hash -> guarantees an int
+        return hash((self.value, self.letter_type))
+    
     def __repr__(self):
         return f"{self.value}:{self.letter_type}"
 
@@ -50,6 +60,12 @@ class LetterSequence:
                 if l.letter_type != self.letter_type:
                     raise ValueError("All letters in the sequence must have the same type")
         self.letters = letters
+    
+    @staticmethod
+    def get_empty_sequence(letter_type: LetterType):
+        seq = LetterSequence([])
+        seq.letter_type = letter_type
+        return seq        
 
     def append(self, letter: Letter):
         if letter.letter_type != self.letter_type:
@@ -57,7 +73,7 @@ class LetterSequence:
                 f"Cannot append letter of type {letter.letter_type} "
                 f"to a sequence of type {self.letter_type}"
             )
-        self.letters.append(letter)
+        return LetterSequence(self.letters + [letter])
     
     def remove(self, indices: Set[int]):
         # create a new LetterSequence without letters at the given indices
@@ -66,7 +82,31 @@ class LetterSequence:
             if not (i in indices):
                 result.append(self.letters[i])
         return LetterSequence(result)
-    
+
+    def get_letter_extension(self, comp: Callable[[Letter, Letter], bool]) -> 'LetterSequence':
+        # Find the index of the first letter that matches the comparator
+        if len(self.letters) == 0:
+            return LetterSequence([Letter(0, self.letter_type)])
+        
+        self_sorted = sorted(self.letters, key=lambda x: x.value)
+        max_value = self_sorted[-1].value
+        min_value = self_sorted[0].value
+        if comp == comp_id:
+            return LetterSequence(self.letters + [Letter(max_value + 1, self.letter_type)])
+        elif comp == comp_lt:
+            letters = []
+            for i in range(len(self_sorted) - 1):
+                letters.append(self_sorted[i])
+                if self_sorted[i].value != self_sorted[i + 1].value:
+                    new_value = (self_sorted[i].value + self_sorted[i + 1].value) / 2
+                    letters.append(Letter(new_value, self.letter_type))
+            letters.append(self_sorted[-1])
+            letters.append(Letter(max_value + 1, self.letter_type))
+            letters.append(Letter(min_value - 1, self.letter_type))
+            return LetterSequence(letters)
+        else:
+            raise ValueError("Unsupported comparator for letter extension")
+
     '''
     we return a function that can map any letter to its corresponding letter
     '''
@@ -78,6 +118,11 @@ class LetterSequence:
         # sort both sequences, not in place
         self_sorted = sorted(self.letters, key=lambda x: x.value)
         other_sorted = sorted(other.letters, key=lambda x: x.value)
+        
+        def mapper(c:Letter) -> Letter:
+            return c
+        if len(self.letters) == 0:
+            return mapper
 
         def mapper(c: Letter) -> Letter:
             if c.letter_type != self.letter_type:
@@ -111,17 +156,29 @@ class LetterSequence:
 
     # create a new LetterSequence by appending another LetterSequence
     def append_sequence(self, other: 'LetterSequence'):
-        if len(other.letters) == 0:
-            return self
-        if len(self.letters) == 0:
-            self.letter_type = other.letter_type
-        
         if other.letter_type != self.letter_type:
             raise ValueError(
                 f"Cannot append sequence of type {other.letter_type} "
                 f"to a sequence of type {self.letter_type}"
             )
+        if len(other.letters) == 0 and len(self.letters) == 0:
+            return LetterSequence.get_empty_sequence(self.letter_type)
         return LetterSequence(self.letters + other.letters)
+    
+    def __eq__(self, other):
+        if not isinstance(other, LetterSequence):
+            return False
+        if self.letter_type != other.letter_type:
+            return False
+        if len(self.letters) != len(other.letters):
+            return False
+        for i in range(len(self.letters)):
+            if self.letters[i] != other.letters[i]:
+                return False
+        return True
+    
+    def __hash__(self):
+        return hash(tuple(self.letters))
             
 
     def __repr__(self):
@@ -150,7 +207,6 @@ def comp_lt(x, y):
 
 
 # from typing import Callable
-Numeric = Union[int, float, Fraction]
 
 
 def is_same_word_type(
@@ -173,6 +229,8 @@ def is_same_word_type(
         • len(seq1) == len(seq2)
         • seq1.letter_type == seq2.letter_type
     """
+    print("seq1 type", seq1.letter_type)
+    print("seq2 type", seq2.letter_type)
 
     if len(seq1.letters) != len(seq2.letters):
         return False

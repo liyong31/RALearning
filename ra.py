@@ -46,6 +46,9 @@ class Location:
         self.name = name
         self.accepting = accepting
         self.transitions: List[Transition] = []
+        
+    def get_id(self) -> int:
+        return self.id
 
     # add transitions
     def add_transition(self, p: int, tau: word.LetterSequence, E: Set[int], q: int):
@@ -72,13 +75,19 @@ class Location:
             result += f"  {t}\n"
         return f"Location({self.id}, name={self.name}, accepting={self.accepting}):\n{result}"
 
-Configuration = Tuple[int, word.LetterSequence]
+# different than classical configuration, we also keep track of the transition taken to reach the configuration
+# this is useful for tracing the run
+Configuration = Tuple[int, word.LetterSequence, Transition]
 
 class RegisterAutomaton:
-    def __init__(self):
+    def __init__(self, letter_type: word.LetterType):
         self.locations: Dict[int, Location] = {}
         self.initial = None
+        self.letter_type = letter_type
         # self.transitions: List[Transition] = []
+        
+    def get_letter_type(self):
+        return self.letter_type
 
     def __check_location_validity(self, p: int):
         if p not in self.locations:
@@ -96,6 +105,9 @@ class RegisterAutomaton:
         self.__check_location_validity(p)
         self.initial = p
 
+    def get_initial(self) -> int:
+        return self.initial
+
     def set_final(self, p: int):
         self.__check_location_validity(p)
         self.locations[p].accepting = True
@@ -111,9 +123,9 @@ class RegisterAutomaton:
         current_configuration: Configuration,
         letter: word.Letter,
         comp: Callable[[word.Numeric, word.Numeric], object] = word.comp_id,
-    ) -> Configuration:
+    ) -> Configuration: # type: ignore
 
-        current_location, v = current_configuration
+        current_location, v, _ = current_configuration
         # Form va by appending the letter to v
         va = word.LetterSequence(v.letters + [letter])
         
@@ -135,7 +147,8 @@ class RegisterAutomaton:
                 # print("removing indices (0-based):", t.E)
                 v_prime = va.remove(t.E)
                 # print("v' after removal:", v_prime)
-                next_configuration = (t.target, v_prime)
+                next_configuration = (t.target, v_prime, t)
+                break
 
         return next_configuration
 
@@ -143,15 +156,16 @@ class RegisterAutomaton:
         self,
         input_word: word.LetterSequence,
         comp: Callable[[word.Numeric, word.Numeric], object] = word.comp_id,
-    ) -> List[Tuple[Location, word.LetterSequence]]:
+    ) -> List[Configuration]:
         """
         Runs the automaton on the input word (sequence of letters).
         Returns the list of reachable configurations (q, v) at the end.
         """
         # print("input word:", input_word)
         # Initial configuration: all locations with empty sequence
-        configurations: List[(Location, word.LetterSequence)] = []
-        current_configuration = (self.initial, word.LetterSequence([]))
+        configurations: List[Configuration] = []
+        # first transition is None
+        current_configuration = (self.initial, word.LetterSequence([]), None)
         configurations.append(current_configuration)
         # Process each letter in the input word
         for a in input_word.letters:
@@ -175,6 +189,6 @@ class RegisterAutomaton:
         An input word is accepted if the final configuration is in an accepting location.
         """
         configurations = self.run(input_word, comp)
-        final_location_id, _ = configurations[-1]
+        final_location_id, _ , _ = configurations[-1]
         final_location = self.locations[final_location_id]
         return final_location.accepting

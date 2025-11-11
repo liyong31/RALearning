@@ -1,6 +1,6 @@
 # ...existing code...
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Any, Callable, Optional
+from typing import List, Set, Dict, Tuple, Any, Callable, Optional
 from word import LetterSequence, Letter, Numeric, is_same_word_type
 import word
 
@@ -13,156 +13,191 @@ The entry at (row, column) indicates whether the concatenation
 '''
 
 class TableRow:
-    def __init__(self, prefix: LetterSequence, memorable: LetterSequence, comp: Callable[[Numeric, Numeric], bool]):
+    def __init__(self, prefix: LetterSequence
+                 , memorable: LetterSequence
+                 , comp: Callable[[Numeric, Numeric], bool]):
+        # prefix word
         self.prefix = prefix
+        # memorable word for prefix
         self.memorable = memorable
         self.comp = comp
         self.entries: List[bool] = []
+        self.accepting = False
+        
+    def set_accepting(self, accepting: bool):
+        self.accepting = accepting
+        
+    def get_accepting(self):
+        return self.accepting
 
     def append_entry(self, value: bool):
         self.entries.append(value)
         
+    def get_entry(self, col_idx: int):
+        if col_idx >= len(self.entries):
+            raise Exception("col_idx exceends length of row")
+        return self.entries[col_idx]
+    
+    # we only check the memorable and prefix values        
     def __eq__(self, value):
         if not isinstance(value, TableRow):
             raise ValueError("Can only compare with another TableRow")
-        ## only compare the memorable words
-        '''
-        u equiv v if 
-        self.memorable \sim_R value.memorable
-        compute bijective mapping between memorable letters
-        for all suffixes w, table[prefix, u][w] == table[prefix, v][w]
-        '''
         if len(self.memorable) != len(value.memorable):
             return False
         # build mapping
-        if is_same_word_type(self.memorable, value.memorable, self.comp) is False:
+        if not is_same_word_type(self.memorable, value.memorable, self.comp):
             return False
-        # build mapping between letters
-        # bijective = self.memorable.get_bijective_mapping_dense(value.memorable, self.comp)
-        # mapped_prefix = LetterSequence(self.memorable.letters.map(bijective))
         
         return self.prefix == value.prefix and self.memorable == value.memorable
 
     def __repr__(self):
         return f"({self.prefix}, {self.memorable})"
     
+    def __hash__(self):
+        return hash((tuple(self.prefix.letters), tuple(self.memorable.letters)))
+    
 class ObservationTable:
-    def __init__(self):
+    def __init__(self, comp: Callable[[Numeric, Numeric], bool]
+                 , membership_oracle: Callable[[LetterSequence], bool]
+                 , memorability_oracle : Callable[[LetterSequence], LetterSequence]):
+        self.comparator = comp
         # Each row label is a pair (prefix, sequence) as requested.
-        self.rows: List[Tuple[LetterSequence, LetterSequence]] = []
+        self.rows: List[TableRow] = []
         # Columns are suffix sequences
         self.columns: List[LetterSequence] = []
+        # only record those extensions that might be moved to rows
+        self.ext_rows : List[Set[Tuple[LetterSequence, LetterSequence]]] = []
+        # to save membership queries, we can save inequal rows for extended rows
+        self.unequal_for_ext_rows: Dict[Tuple[LetterSequence, LetterSequence], Set[TableRow]] = {}
         # table maps (row_idx, col_idx) -> bool (accepting / membership)
-        self.table: Dict[Tuple[int, int], bool] = {}
+        # self.table: Dict[Tuple[int, int], bool] = {}
+        self.membership_oracle = membership_oracle
+        self.memorability_oracle = memorability_oracle
+    
+    def exists_row(self, prefix: LetterSequence, memorable: LetterSequence):
+        r = TableRow(prefix, memorable, self.comparator)
+        for row in self.rows:
+            if row == r:
+                return row
+        return None
+            
 
-    def add_row(self, prefix: LetterSequence, sequence: LetterSequence):
-        self.rows.append((prefix, sequence))
+    def add_row(self, prefix: LetterSequence, memorable: LetterSequence):
+        row = TableRow(prefix, memorable, self.comparator)
+        self.rows.append(row)
+        mq_result = self.membership_oracle(prefix)
+        row.set_accepting(mq_result)
+        # now fill the table
+        for column_idx in range(len(self.columns)):
+            suffix = self.columns[column_idx]
+            composed_seq = LetterSequence(prefix.letters + suffix.letters)
+            row.append_entry(self.membership_oracle(composed_seq))
+        ext_set = self.generate_extended_rows(row)
+        self.ext_rows.append(ext_set)
+        return row
 
     def add_column(self, suffix: LetterSequence):
         self.columns.append(suffix)
-
-    def set_entry(self, row_idx: int, col_idx: int, value: bool):
-        self.table[(row_idx, col_idx)] = value
+        # now, for every row, we need to ask membership queries
+        for row in self.rows:
+            mq_result = self.membership_oracle(LetterSequence(row.prefix.letters + suffix.letters))
+            row.append_entry(mq_result)
+    
+    # only need to do this for a new added row        
+    def generate_extended_rows(self, row: TableRow):
+        print("row", row.prefix)
+        extensions = row.prefix.get_letter_extension(self.comparator)
+        print(extensions)
+        print("extensions", extensions.letter_type)
+        ext_set : Set[Tuple[LetterSequence, LetterSequence]]= set()
+        for letter in extensions.letters:
+            ext_row = row.prefix.append_sequence(LetterSequence([letter]))
+            memorable_ext_row = self.memorability_oracle(ext_row)
+            ext_set.add((ext_row, memorable_ext_row))
+        return ext_set
 
     def get_entry(self, row_idx: int, col_idx: int) -> bool:
-        return self.table.get((row_idx, col_idx), False)
-
-    def row_vector(self, row_idx: int) -> Tuple[bool, ...]:
-        return tuple(self.get_entry(row_idx, j) for j in range(len(self.columns)))
-
-    def find_row_with_vector(self, vec: Tuple[bool, ...]) -> Optional[int]:
-        for i in range(len(self.rows)):
-            if self.row_vector(i) == vec:
-                return i
-        return None
-
-    def is_closed(self, extension_row_indices: List[int]) -> bool:
+        return self.rows[row_idx].get((row_idx, col_idx), False)
+    
+    # check whether an extended row is equivalent to a current representative
+    def is_equivalent(self, row: TableRow, ext_prefix: LetterSequence, ext_memorable: LetterSequence):
         """
-        Check closedness: every extension row (typically S·Σ) has a representative
-        in the base rows (typically S). extension_row_indices are indices of rows
-        that should be checked for presence in the base set.
+        we check for every row (u, v), whether the extended row (u', v') is equivalent to all columns w such that
+        first check whether memorable words are of the same type, if no, return False
+        otherwise, obtain a map sigma from v' to v
+        check whether sigma(u') w in L iff uw in L
         """
-        for ext_idx in extension_row_indices:
-            vec = self.row_vector(ext_idx)
-            if self.find_row_with_vector(vec) is None:
+        print("=====================================")
+        print("Check row ", row.prefix, row.memorable)
+        print("Search for ", ext_prefix, ext_memorable)
+        if row in self.unequal_for_ext_rows[(ext_prefix, ext_memorable)]:
+            return False
+        # check whether it is the same row
+        if row.prefix == ext_prefix and row.memorable == ext_memorable:
+            return True
+        print("row mem", row.memorable)
+        print("ext mem", ext_memorable)
+        if not word.is_same_word_type(row.memorable, ext_memorable, self.comparator):
+            self.unequal_for_ext_rows[(ext_prefix, ext_memorable)].add(row)
+            return False
+        sigma = ext_memorable.get_bijective_mapping_dense(row.memorable)
+        print("ext_prefix:", ext_prefix)
+        print("ext_mem:", ext_memorable)
+        print("mem refix:", row.memorable)
+        mapped_ext_prefix = LetterSequence([sigma(l) for l in ext_prefix.letters])
+        for column_idx in range(len(self.columns)):
+            suffix = self.columns[column_idx]
+            composed_seq = LetterSequence(mapped_ext_prefix.letters + suffix.letters)
+            mq_result = self.membership_oracle(composed_seq)
+            if mq_result != row.get_entry(column_idx):
+                self.unequal_for_ext_rows[(ext_prefix, ext_memorable)].add(row)
                 return False
         return True
+    
+    def find_equivalent_row(self, ext_prefix: LetterSequence, ext_memorable: LetterSequence):
+            # ensure cache key exists to avoid KeyError inside is_equivalent
+            print(self.unequal_for_ext_rows)
+            self.unequal_for_ext_rows.setdefault((ext_prefix, ext_memorable), set())
+            for idx, row in enumerate(self.rows):
+                if self.is_equivalent(row, ext_prefix, ext_memorable):
+                    print("Found row", idx)
+                    return idx
+            return -1
+    
+    def pretty_print(self):
+        if not self.rows or not self.columns:
+            print("(empty table)")
+            return
 
-    def is_consistent(self) -> bool:
-        """
-        Basic consistency check: if two rows in the base set have the same vector,
-        then for every possible one-letter extension (a) their extensions' vectors
-        should also match. This method requires the table to already contain those
-        extension rows; otherwise it's a best-effort check.
-        """
-        n = len(self.rows)
-        # find pairs of equal rows
-        for i in range(n):
-            for j in range(i + 1, n):
-                if self.row_vector(i) == self.row_vector(j):
-                    # For every symbol x present in columns as 1-letter suffixes, check consistency
-                    for col in self.columns:
-                        # Build extension vectors by finding rows whose suffix equals (col prefixed with something)
-                        # This is a lightweight check: we expect extension rows to exist in table.
-                        # We compare the rows that represent extending the two base labels by the column prefix if present.
-                        vec_i = self.row_vector(i)
-                        vec_j = self.row_vector(j)
-                        if vec_i != vec_j:
-                            return False
-        return True
+        # Convert all entries to strings for width computation
+        col_labels = [str(c) for c in self.columns]
 
-    def display(self):
-        header = ["(prefix, seq) \\ suffix"] + [str(col) for col in self.columns]
-        print("\t".join(header))
-        for i, (prefix, seq) in enumerate(self.rows):
-            row_entries = [str(self.get_entry(i, j)) for j in range(len(self.columns))]
-            print(f"({prefix}, {seq})\t" + "\t".join(row_entries))
+        # Compute widths
+        col_width = max(len(label) for label in col_labels + ["Result"]) + 2
+        row_label_width = max(len(str((r.prefix, r.memorable))) for r in self.rows) + 2
 
-def build_observation_table(
-    prefixes: List[Tuple[LetterSequence, LetterSequence]],
-    suffixes: List[LetterSequence],
-    membership_oracle: Callable[[LetterSequence], bool]
-) -> ObservationTable:
-    """
-    Build and populate an observation table from given (prefix, seq) pairs
-    and suffixes, using membership_oracle(seq) -> bool to fill entries.
-    """
-    ot = ObservationTable()
-    for (p, s) in prefixes:
-        ot.add_row(p, s)
-    for suf in suffixes:
-        ot.add_column(suf)
-    # Fill table: each cell corresponds to concatenation of the row's sequence with the suffix.
-    for i, (p, seq) in enumerate(ot.rows):
-        for j, suf in enumerate(ot.columns):
-            combined = seq.append_sequence(suf)
-            print(seq, "+", suf, "->", combined)
-            ot.set_entry(i, j, membership_oracle(combined))
-    return ot
+        # Header
+        header = " " * row_label_width + "".join(f"{label:>{col_width}}" for label in col_labels)
+        print(header)
+        print("-" * len(header))
+
+        # Rows
+        for row in self.rows:
+            row_label = f"{(row.prefix, row.memorable)}"
+            entries = [("✓" if row.get_entry(j) else "✗") for j in range(len(self.columns))]
+            row_str = f"{row_label:<{row_label_width}}" + "".join(f"{e:>{col_width}}" for e in entries)
+            print(row_str)
+
 
 # Example usage (replace membership_oracle with real oracle when available)
 if __name__ == "__main__":
     # Dummy oracle: accept sequences of even length
-    def dummy_oracle(seq: LetterSequence) -> bool:
-        return len(seq) % 2 == 0
+    t = ObservationTable(lambda x, y: x == y, None, None)
+    t.columns = [LetterSequence([Letter(1, word.LetterType.REAL)]), LetterSequence([Letter(2, word.LetterType.REAL)]), LetterSequence([Letter(1, word.LetterType.REAL), Letter(2, word.LetterType.REAL)])]
+    row1 = TableRow(LetterSequence([Letter(1, word.LetterType.REAL)]), LetterSequence([Letter(3, word.LetterType.REAL)]), lambda x,y: x==y)
+    row1.entries = [True, False, True]
+    row2 = TableRow(LetterSequence([Letter(2, word.LetterType.REAL)]), LetterSequence([Letter(4, word.LetterType.REAL)]), lambda x,y: x==y)
+    row2.entries = [False, True, False]
+    t.rows = [row1, row2]
 
-    # Build small alphabet letters
-    a = Letter(3, word.LetterType.REAL)
-    b = Letter(4, word.LetterType.REAL)
-
-    # Some sequences
-    empty = LetterSequence([])
-    s1 = LetterSequence([a])
-    s2 = LetterSequence([b])
-    s3 = LetterSequence([a, b])
-
-    prefixes = [
-        (empty, empty),        # typically in S
-        (empty, s1),           # in S
-        (empty, s2),           # in S
-        (s1, s2),              # an extension row example (prefix, seq)
-    ]
-    suffixes = [empty, LetterSequence([a]), LetterSequence([b])]
-
-    ot = build_observation_table(prefixes, suffixes, dummy_oracle)
-    ot.display()
+    t.pretty_print()

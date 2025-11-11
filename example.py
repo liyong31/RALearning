@@ -13,7 +13,7 @@ def get_example_ra_1():
     1. a1 < a2, then ai < a1 or ai > a2 for all i >=3
     2. a1 > a2, then a2 < ai < a1 for all i >=3
     """
-    targetRA = ra.RegisterAutomaton()
+    targetRA = ra.RegisterAutomaton(word.LetterType.REAL)
     targetRA.add_location(0, "q0", accepting=False)
     targetRA.add_location(1, "q1", accepting=False)
     targetRA.add_location(2, "q2", accepting=True)
@@ -53,17 +53,41 @@ def get_example_ra_1():
             word.Letter(4, word.LetterType.REAL),
             word.Letter(5, word.LetterType.REAL)
         ])
+    tau_nat_5p = word.LetterSequence(
+        [
+            word.Letter(3, word.LetterType.REAL),
+            word.Letter(4, word.LetterType.REAL),
+            word.Letter(3, word.LetterType.REAL)
+        ])
+    tau_nat_6p = word.LetterSequence(
+        [
+            word.Letter(3, word.LetterType.REAL),
+            word.Letter(4, word.LetterType.REAL),
+            word.Letter(4, word.LetterType.REAL)
+        ])
     tau_nat_7 = word.LetterSequence(
         [
             word.Letter(3, word.LetterType.REAL),
             word.Letter(2, word.LetterType.REAL),
             word.Letter(1, word.LetterType.REAL)
         ])
+    tau_nat_7p = word.LetterSequence(
+        [
+            word.Letter(3, word.LetterType.REAL),
+            word.Letter(2, word.LetterType.REAL),
+            word.Letter(3, word.LetterType.REAL)
+        ])
     tau_nat_8 = word.LetterSequence(
         [
             word.Letter(3, word.LetterType.REAL),
             word.Letter(2, word.LetterType.REAL),
             word.Letter(4, word.LetterType.REAL)
+        ])
+    tau_nat_8p = word.LetterSequence(
+        [
+            word.Letter(3, word.LetterType.REAL),
+            word.Letter(2, word.LetterType.REAL),
+            word.Letter(2, word.LetterType.REAL)
         ])
     # jump to state 4
     tau_nat_9 = word.LetterSequence(
@@ -85,9 +109,15 @@ def get_example_ra_1():
     targetRA.add_transition(2, tau_nat_4, {2}, 2)
     targetRA.add_transition(3, tau_nat_5, {2}, 3)
     targetRA.add_transition(3, tau_nat_6, {2}, 3)
+
     targetRA.add_transition(2, tau_nat_7, {0,1,2}, 4)
     targetRA.add_transition(2, tau_nat_8, {0,1,2}, 4)
+    targetRA.add_transition(2, tau_nat_7p, {0,1,2}, 4)
+    targetRA.add_transition(2, tau_nat_8p, {0,1,2}, 4)
     targetRA.add_transition(3, tau_nat_9, {0,1,2}, 4)
+    targetRA.add_transition(3, tau_nat_5p, {0,1, 2}, 4)
+    targetRA.add_transition(3, tau_nat_6p, {0,1, 2}, 4)
+
 
     tau_nat_true = word.LetterSequence(
         [
@@ -95,6 +125,19 @@ def get_example_ra_1():
         ])
     targetRA.add_transition(4, tau_nat_true, {0}, 4)
     return targetRA
+
+def solve_memorability_query_1(target: ra.RegisterAutomaton, u: word.LetterSequence):
+    if len(u.letters) <= 0:
+        return word.LetterSequence([])
+    if len(u.letters) == 1:
+        return word.LetterSequence([u.letters[0]])
+    
+    is_accepted = target.is_accepted(u, word.comp_lt)
+    if is_accepted:
+        return word.LetterSequence(u.letters[:2])
+    else:
+        return word.LetterSequence([])
+    
 
 def get_example_ra_2():
     """
