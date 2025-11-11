@@ -12,7 +12,8 @@ class RALearner:
     """
     Learner for Register Automata (RA) using a table structure
     """
-    def __init__(self, oracle: Teacher, comparator: Callable[[Letter, Letter], bool], letter_type: LetterType):
+    def __init__(self, oracle: Teacher, comparator: Callable[[Letter, Letter], bool]
+                 , letter_type: LetterType):
         self.oracle = oracle
         self.comparator = comparator
         self.already_started = False
@@ -64,7 +65,9 @@ class RALearner:
         self.already_started = True
         # Initial learning steps can be added here
          # Initialize the root of the tree with an empty LetterSequence
-        self.table = ObservationTable(self.comparator, self.oracle.membership_query, self.oracle.memorability_query)
+        self.table = ObservationTable(self.comparator
+                                      , self.oracle.membership_query
+                                      , self.oracle.memorability_query)
         # add empty column
         self.table.add_column(self.__get_empty_sequence())
         self.table.add_row(self.__get_empty_sequence(), self.__get_empty_sequence())
@@ -74,9 +77,8 @@ class RALearner:
         self.construct_hypothesis()
         
     def construct_hypothesis(self) -> None:
-        print("next_loc_map", self.next_loc_map)
-        for ext_set in self.table.ext_rows:
-            print("ext_set", ext_set)
+        # for ext_set in self.table.ext_rows:
+        #     print("ext_set", ext_set)
         self.hypothesis = RegisterAutomaton(self.letter_type)
         # For each state node, add a location to the RA
         for idx, row in enumerate(self.table.rows):
@@ -84,11 +86,16 @@ class RALearner:
         for idx, row in enumerate(self.table.rows):
             # self.hypothesis.add_location(idx, row.prefix, row.get_accepting())
             for extended_label, extended_memorable in self.table.ext_rows[idx]:
-                print("curr", row.prefix, "extended_seq", extended_label)
+                # print("curr", row.prefix, "extended_seq", extended_label)
                 # add memorable sequence to the next_node
                 # add transition from current state to next_node
                 letter = extended_label.letters[-1]
                 E = self.compute_E_set(row.memorable, letter, extended_memorable)
+                print("curr idx", idx)
+                print("mem ", row.memorable)
+                print("letter ", letter)
+                print("extended_mem ", extended_memorable)
+
                 print("E set", E)
                 self.hypothesis.add_transition(
                         idx,
@@ -112,32 +119,13 @@ class RALearner:
         """
         E = set()
         memorable_set = set(memorable_seq.letters)
-        
-        for i in range(len(seq.letters)):
-            if seq.letters[i] not in memorable_set:
+        extended_list = seq.letters + [letter]
+        for i in range(len(extended_list)):
+            if extended_list[i] not in memorable_set:
                 E.add(i)
-            elif i < len(seq.letters) and seq.letters[i] == letter:
+            elif i < len(extended_list) - 1 and extended_list[i] == letter:
                 E.add(i)
         return E
-        
-        
-    def refine_classification_tree(self, state_id: int, seq: LetterSequence, memorable_seq: LetterSequence, distinguishing_suffix: LetterSequence) -> None:
-        """
-        Minimal placeholder for refining the classification tree to avoid AttributeError.
-        This implementation attaches a new child node under the given state using the provided
-        seq and memorable_seq, and then rebuilds the hypothesis; a complete implementation
-        should refine the tree according to distinguishing_suffix.
-        """
-        # guard against invalid state ids
-        if state_id is None or state_id < 0 or state_id >= len(self.locations):
-            return
-        node = self.locations[state_id]
-        # use membership of seq as the acceptance label for the new child
-        mq_result = self.oracle.membership_query(seq)
-        new_node = self.__create_state_node(seq, memorable_seq)
-        node.add_existing_child((memorable_seq, mq_result), new_node)
-        # rebuild hypothesis to reflect the refined classification tree
-        self.construct_hypothesis()
 
                 
     def refine_hypothesis(self, cex_seq: LetterSequence):
@@ -150,76 +138,107 @@ class RALearner:
         
         we know that MQ(u_{i-1} a_i ... an) = MQ(a1 ... a{i-1} ai ... an) 
         u_i = state reached after processing a1 ... ai
-        
         """
-        print("cex ", cex)
+        print("cex ", cex_seq)
+        # we compare the prefix a1 ... ai with ui
+        cex_mq_result = self.oracle.membership_query(cex_seq)
+        print("cex mq ", cex_mq_result)
         # configuration = Tuple(location_id: int, word: LetterSequence, transition: Optional[Transition])
         configuration_seq = self.hypothesis.run(cex_seq, self.comparator)
         print(configuration_seq)
-        # curr_location = self.hypothesis.get_initial()
-        curr_config = LetterSequence([])
-        curr_transition = None
-        # we compare the prefix a1 ... ai with ui
-        cex_mq_result = self.oracle.membership_query(cex_seq)
-        # cex_suffix = LetterSequence(cex_seq.letters + [])
-        i = 0
-        num_letters = len(cex_seq.letters)
-        while i < num_letters:
-            a_iplusone_letter = cex_seq.letters[i]
-            # check whether u_i b_{i+1} and u_{i+1} are distinguishable by a_{i+2} ... a_n
-            chosen_transition = configuration_seq[i][2]
-            # (p, tau, E, q)
-            print("chosen transition: ", chosen_transition)
-            """
-            tau = M(ui) b{i+1}, it matches a1 a_i a{i+1}
-            we already know that MQ(ui a{i+1} ... an) = MQ(a1...an) 
-            We want to check whether ui b{i+1} == ui a{i+1}
-            M(ui b{i+1}) = M(ui a{i+1}) and whether MQ(ui b{i+1} a{i+2}...an) = MQ(...)
-            if 
-            """
-            curr_location = chosen_transition.source
-            next_location = chosen_transition.target
-            # tau = M(u_i) b{i+1}, it matches a1 a_i a{i+1}
-            # we already know that MQ(u_i a{i+1} ... an) = MQ(a1...an) 
-            b_iplusone_letter = chosen_transition.tau[-1]
-            u_i_seq = self.locations[curr_location].label
-            u_i_b_seq = u_i_seq.append(b_iplusone_letter)
-            u_i_a_seq = u_i_seq.append(a_iplusone_letter)
-            # we obtain the map from u_i a_{i+1} to u_i b_{i+1}
-            # we know that config . a{i+1} \sim_R u_i b{i+1}
-            bi_map = u_i_a_seq.get_bijective_mapping_dense(u_i_b_seq)
-            mapped_suffix = LetterSequence(
-                [bi_map(l) for l in cex_seq.letters[i+1:]])
-            mapped_seq = LetterSequence(u_i_b_seq.letters + mapped_suffix.letters)
-            dummy_prefix = LetterSequence(
-                [bi_map(l) for l in cex_seq.letters[:i+1]])
-            # new sequence should have the same membership result as u_{i+1} ... a_n
-            assert self.oracle.membership_query(mapped_seq) == cex_mq_result, "mapped sequence membership query result mismatch "
-            # If the membership query result is the same, we can use this mapping
-            u_iplusone = self.locations[next_location].label
-            u_iplusone_memorable = self.memorables[next_location]
-            u_i_b_seq_memorable = self.oracle.get_memorability_query(u_i_b_seq)
-            assert word.is_same_word_type(u_i_b_seq_memorable, u_iplusone_memorable), "memorable sequence mismatch"
-            bi_map = u_iplusone_memorable.get_bijective_mapping_dense(u_i_b_seq_memorable)
-            mapped_prefix = LetterSequence(
-                [bi_map(l) for l in u_iplusone.letters])
-            mapped_seq = LetterSequence(mapped_prefix.letters + mapped_suffix.letters)
-            mapped_seq_mq_result = self.oracle.membership_query(mapped_seq)
-            if mapped_seq_mq_result == cex_mq_result:
-                cex_seq = LetterSequence(dummy_prefix.letters + mapped_suffix.letters)
-                continue
-            else:
-                # mapped suffix distinguishes u_i b_{i+1} and u_{i+1}
-                self.refine_classification_tree(
-                    next_location,
-                    u_i_b_seq,
-                    u_i_b_seq_memorable,
-                    mapped_suffix
-                )
+        curr_location = self.hypothesis.get_initial()
+        curr_config = self.__get_empty_sequence()
+        # curr_transition = None
+        # num_letters = len(cex_seq.letters)
+        for i in range(len(cex_seq.letters)):
+            print("curr loc ", curr_location, " curr config ", curr_config)
+            next_location, next_config, _ = self.hypothesis.step((curr_location, curr_config, None)
+                                                                               , cex_seq.letters[i], self.comparator)
+            print("next loc ", next_location, " next config ", next_config)
+
+            # configuration should be ok
+            cex_suffix = cex_seq.get_suffix(i+1)
+            print("cex suffix", cex_suffix)
+            # next_location_memorable = self.table.rows[next_location].memorable
+            next_location_prefix = self.table.rows[next_location].prefix
+            print("next loc", next_location_prefix)
+            composed_seq = next_location_prefix.append_sequence(cex_suffix)
+            mq_result = self.oracle.membership_query(composed_seq)
+            if mq_result != cex_mq_result:
+                # no need to add suffix?
+                cex_prefix = cex_seq.get_prefix(i+1)
+                # now compute the suffix?
+                cex_prefix_memorable = self.oracle.memorability_query(cex_prefix)
+                self.table.add_row(cex_prefix, cex_prefix_memorable)
+                self.table.add_column(cex_suffix)
                 break
-            i = i + 1
             
-        return None
+            curr_location = next_location
+            curr_config = next_config
+        
+        self.close_table()
+        self.construct_hypothesis()
+            
+        
+        # cex_suffix = LetterSequence(cex_seq.letters + [])
+        # i = 0
+        # num_letters = len(cex_seq.letters)
+        # while i < num_letters:
+        #     a_iplusone_letter = cex_seq.letters[i]
+        #     # check whether u_i b_{i+1} and u_{i+1} are distinguishable by a_{i+2} ... a_n
+        #     chosen_transition = configuration_seq[i][2]
+        #     # (p, tau, E, q)
+        #     print("chosen transition: ", chosen_transition)
+        #     """
+        #     tau = M(ui) b{i+1}, it matches a1 a_i a{i+1}
+        #     we already know that MQ(ui a{i+1} ... an) = MQ(a1...an) 
+        #     We want to check whether ui b{i+1} == ui a{i+1}
+        #     M(ui b{i+1}) = M(ui a{i+1}) and whether MQ(ui b{i+1} a{i+2}...an) = MQ(...)
+        #     if 
+        #     """
+        #     curr_location = chosen_transition.source
+        #     next_location = chosen_transition.target
+        #     # tau = M(u_i) b{i+1}, it matches a1 a_i a{i+1}
+        #     # we already know that MQ(u_i a{i+1} ... an) = MQ(a1...an) 
+        #     b_iplusone_letter = chosen_transition.tau[-1]
+        #     u_i_seq = self.locations[curr_location].label
+        #     u_i_b_seq = u_i_seq.append(b_iplusone_letter)
+        #     u_i_a_seq = u_i_seq.append(a_iplusone_letter)
+        #     # we obtain the map from u_i a_{i+1} to u_i b_{i+1}
+        #     # we know that config . a{i+1} \sim_R u_i b{i+1}
+        #     bi_map = u_i_a_seq.get_bijective_mapping_dense(u_i_b_seq)
+        #     mapped_suffix = LetterSequence(
+        #         [bi_map(l) for l in cex_seq.letters[i+1:]])
+        #     mapped_seq = LetterSequence(u_i_b_seq.letters + mapped_suffix.letters)
+        #     dummy_prefix = LetterSequence(
+        #         [bi_map(l) for l in cex_seq.letters[:i+1]])
+        #     # new sequence should have the same membership result as u_{i+1} ... a_n
+        #     assert self.oracle.membership_query(mapped_seq) == cex_mq_result, "mapped sequence membership query result mismatch "
+        #     # If the membership query result is the same, we can use this mapping
+        #     u_iplusone = self.locations[next_location].label
+        #     u_iplusone_memorable = self.memorables[next_location]
+        #     u_i_b_seq_memorable = self.oracle.get_memorability_query(u_i_b_seq)
+        #     assert word.is_same_word_type(u_i_b_seq_memorable, u_iplusone_memorable), "memorable sequence mismatch"
+        #     bi_map = u_iplusone_memorable.get_bijective_mapping_dense(u_i_b_seq_memorable)
+        #     mapped_prefix = LetterSequence(
+        #         [bi_map(l) for l in u_iplusone.letters])
+        #     mapped_seq = LetterSequence(mapped_prefix.letters + mapped_suffix.letters)
+        #     mapped_seq_mq_result = self.oracle.membership_query(mapped_seq)
+        #     if mapped_seq_mq_result == cex_mq_result:
+        #         cex_seq = LetterSequence(dummy_prefix.letters + mapped_suffix.letters)
+        #         continue
+        #     else:
+        #         # mapped suffix distinguishes u_i b_{i+1} and u_{i+1}
+        #         self.refine_classification_tree(
+        #             next_location,
+        #             u_i_b_seq,
+        #             u_i_b_seq_memorable,
+        #             mapped_suffix
+        #         )
+        #         break
+        #     i = i + 1
+            
+        # return None
 
 if __name__ == "__main__":
     
@@ -257,7 +276,7 @@ if __name__ == "__main__":
                                                , word.Letter(3, word.LetterType.REAL)
                                                , word.Letter(4, word.LetterType.REAL)
                                                , word.Letter(0, word.LetterType.REAL)]
-                                  ,10)
+                                  ,6)
         print("eq ", eq, "cex ", cex)
         if eq:
             print("Output hypothesis:\n", hypothesis)

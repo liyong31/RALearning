@@ -150,6 +150,18 @@ class LetterSequence:
             return Letter(mapped_value, other.letter_type)
 
         return mapper
+    
+    def get_prefix(self, length : int):
+        if length == 0 or self.__len__() <= 0: 
+            return LetterSequence.get_empty_sequence(self.letter_type)
+        if length >= self.__len__():
+            raise Exception("Prefix length greater than __len__")
+        return LetterSequence(self.letters[:length])
+    
+    def get_suffix(self, idx : int):
+        if idx >= self.__len__() or idx < 0 or self.__len__() <= 0:
+            return LetterSequence.get_empty_sequence(self.letter_type)
+        return LetterSequence(self.letters[idx:])
 
     def __len__(self):
         return len(self.letters)
@@ -229,9 +241,6 @@ def is_same_word_type(
         • len(seq1) == len(seq2)
         • seq1.letter_type == seq2.letter_type
     """
-    print("seq1 type", seq1.letter_type)
-    print("seq2 type", seq2.letter_type)
-
     if len(seq1.letters) != len(seq2.letters):
         return False
 
