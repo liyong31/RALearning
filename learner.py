@@ -149,6 +149,7 @@ class RegisterAutomatonLearner:
             if not self.alphabet.test_type(location_memorable, prefix_memorable):
                 should_add_row = True
             else:
+                # should directly add curr_location_prefix and letter?
                 sigma = prefix_memorable.get_bijective_map(location_memorable)
                 mapped_suffix = self.alphabet.apply_map(suffix_seq, sigma)
                 composed_seq = location_prefix.concat(mapped_suffix)
@@ -160,6 +161,9 @@ class RegisterAutomatonLearner:
                 mapped_memorable = self.alphabet.apply_map(prefix_memorable, sigma)
                 self.observation_table.insert_row(mapped_prefix, mapped_memorable)
                 self.observation_table.insert_column(mapped_suffix)
+                # print("next loc", location_prefix)
+                # print("mapped row ", mapped_prefix, mapped_memorable)
+                # print("mapped suffix ", mapped_suffix)
                 break
 
             current_location = next_location
@@ -171,10 +175,10 @@ class RegisterAutomatonLearner:
 
 if __name__ == "__main__":
     # Example usage
-    ra_example = example.get_example_ra_1()
+    ra_example = example.get_example_ra_2()
     print("Test acceptance:", ra_example.is_accepted(ra_example.alphabet.make_sequence([1, 2, 1, 2])))
 
-    teacher = Teacher(ra_example, example.solve_memorability_query_1)
+    teacher = Teacher(ra_example, example.solve_memorability_query_2)
     learner = RegisterAutomatonLearner(teacher, ra_example.alphabet)
     learner.start_learning()
 

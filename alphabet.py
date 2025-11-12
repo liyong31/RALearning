@@ -74,6 +74,8 @@ class LetterSeq:
 
     def remove_by_indices(self, indices: Set[int]) -> "LetterSeq":
         remaining = [l for i, l in enumerate(self.letters) if i not in indices]
+        if len(remaining) == 0:
+            return LetterSeq.empty(self.letter_type)
         return LetterSeq(remaining)
 
     def __len__(self) -> int:
