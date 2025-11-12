@@ -108,7 +108,7 @@ class ObservationTable:
         Generate all candidate extended rows for a given row by extending its prefix.
         Returns a set of (extended_prefix, extended_memorable) tuples.
         """
-        extensions = row.row_prefix.get_letter_extension(self.alphabet.comparator)
+        extensions = row.row_memorable.get_letter_extension(self.alphabet.comparator)
         extended_set: Set[Tuple[LetterSeq, LetterSeq]] = set()
         for letter in extensions.letters:
             extended_prefix = row.row_prefix.concat(LetterSeq([letter]))

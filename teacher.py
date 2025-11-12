@@ -170,7 +170,8 @@ class Teacher:
         reach the same state in the target RegisterAutomaton.
         """
         self.num_memorability_queries = self.num_memorability_queries + 1
-        seq = get_memorable_seq(self.target, u)
+        # seq = get_memorable_seq(self.target, u)
+        seq = self.mem_query_resolver(self.target, u)
         return seq
     
 
