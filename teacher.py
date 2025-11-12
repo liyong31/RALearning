@@ -8,15 +8,16 @@ from dra import RegisterAutomaton
 from collections import deque
 from typing import Optional, List, Tuple
 
-def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterSeq) -> bool:
+def find_difference(A: RegisterAutomaton, u: LetterSeq, B: RegisterAutomaton, v: LetterSeq) -> Optional[LetterSeq]:
     """
-    Decide whether there exists a word w such that A accepts uw but not vw.
+    Decide whether there exists a word w such that A accepts uw but B rejects vw.
     u and v must be of the same type (same comparison pattern).
     """
-
+    if A.alphabet.letter_type != B.alphabet.letter_type:
+        raise Exception("Two automata letter_type mismatch")
     # ---- Step 1: Compute resulting configurations of u and v ----
-    conf_u = target.run(u)[-1]  # (loc_u, reg_u, _)
-    conf_v = target.run(v)[-1]  # (loc_v, reg_v, _)
+    conf_u = A.run(u)[-1]  # (loc_u, reg_u, _)
+    conf_v = B.run(v)[-1]  # (loc_v, reg_v, _)
     loc_u, reg_u, _ = conf_u
     loc_v, reg_v, _ = conf_v
 
@@ -29,8 +30,8 @@ def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterS
         (l1, r1), (l2, r2), w_prefix = queue.popleft()
 
         # If one configuration is accepting and the other is not → found distinguishing w
-        acc1 = target.locations[l1].accepting
-        acc2 = target.locations[l2].accepting
+        acc1 = A.locations[l1].accepting
+        acc2 = B.locations[l2].accepting
         if acc1 != acc2:
             # print("Found distinguishing word:", w_prefix)
             return w_prefix
@@ -46,11 +47,11 @@ def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterS
         next_letters = set(r1.get_letter_extension(target.alphabet.comparator).letters)
         next_letters |= set(r2.get_letter_extension(target.alphabet.comparator).letters)
         for next_letter in next_letters:
-            for t1 in target.locations[l1].transitions:
-                for t2 in target.locations[l2].transitions:
+            for t1 in A.locations[l1].transitions:
+                for t2 in B.locations[l2].transitions:
                     input_tau1 = r1.append(next_letter)
                     input_tau2 = r2.append(next_letter)
-                    if target.alphabet.test_type(input_tau1, t1.tau) and target.alphabet.test_type(input_tau2, t2.tau):
+                    if A.alphabet.test_type(input_tau1, t1.tau) and A.alphabet.test_type(input_tau2, t2.tau):
                     # Do NOT require same type here.
                         new_r1 = input_tau1.remove_by_indices(t1.indices_to_remove)
                         new_r2 = input_tau2.remove_by_indices(t2.indices_to_remove)
@@ -59,6 +60,13 @@ def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterS
 
     # No distinguishing word found
     return None
+
+def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterSeq) -> bool:
+    """
+    Decide whether there exists a word w such that A accepts uw but not vw.
+    u and v must be of the same type (same comparison pattern).
+    """
+    return find_difference(target, u, target, v)
 
 def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
     print("enter memorable seq")
