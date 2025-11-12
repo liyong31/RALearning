@@ -157,3 +157,66 @@ def get_example_ra_2():
 
 
     return targetRA
+
+def get_example_ra_3():
+    """
+    accept when the word is the form of abab where a < b
+    """
+    alphabet = Alphabet(LetterType.REAL, comp_lt)
+    targetRA = dra.RegisterAutomaton(alphabet)
+
+    targetRA.add_location(0, "ɛ", accepting=False)
+    targetRA.add_location(1, "1", accepting=False)
+    targetRA.add_location(2, "12", accepting=False)
+    targetRA.add_location(3, "11", accepting=False) # sink state
+    targetRA.add_location(4, "121", accepting=False)
+    targetRA.add_location(5, "1212", accepting=True)
+
+    targetRA.set_initial(0)
+    
+    tau_nat_1 = alphabet.make_sequence([1])
+    targetRA.add_transition(0, tau_nat_1, {}, 1)
+
+    tau_nat_11 = alphabet.make_sequence([1, 1])
+    targetRA.add_transition(1, tau_nat_11, {0,1}, 3)
+    targetRA.add_transition(3, tau_nat_1, {0}, 3)
+    tau_nat_10 = alphabet.make_sequence([1, 0])
+    targetRA.add_transition(1, tau_nat_10, {0,1}, 3)
+
+
+    
+    tau_nat_12 = alphabet.make_sequence([1, 2])
+    targetRA.add_transition(1, tau_nat_12, {}, 2)
+
+    
+    tau_nat_121 = alphabet.make_sequence([1, 2, 1])
+    tau_nat_122 = alphabet.make_sequence([1, 2, 2]) 
+    tau_nat_123 = alphabet.make_sequence([1, 2, 3])
+    tau_nat_121d5 = alphabet.make_sequence([1, 2, 1.5])
+    tau_nat_120 = alphabet.make_sequence([1, 2, 0])
+    targetRA.add_transition(2, tau_nat_121, {}, 4)
+    targetRA.add_transition(2, tau_nat_121d5, {0, 1, 2}, 3)
+    targetRA.add_transition(2, tau_nat_122, {0,1,2}, 3)
+    targetRA.add_transition(2, tau_nat_123, {0,1,2}, 3)
+    targetRA.add_transition(2, tau_nat_120, {0,1,2}, 3)
+    
+    tau_nat_1212 = alphabet.make_sequence([1, 2, 1, 2])
+    targetRA.add_transition(4, tau_nat_1212, {0, 1, 2, 3}, 5)
+    tau_nat_1211 = alphabet.make_sequence([1, 2, 1, 1])
+    tau_nat_1210 = alphabet.make_sequence([1, 2, 1, 0])
+    tau_nat_1211d5 = alphabet.make_sequence([1, 2, 1, 1.5])
+
+    targetRA.add_transition(4, tau_nat_1211, {0, 1, 2, 3}, 3)
+    targetRA.add_transition(4, tau_nat_1210, {0, 1, 2, 3}, 3)
+    targetRA.add_transition(4, tau_nat_1211d5, {0, 1, 2, 3}, 3)
+
+    tau_nat_1213 = alphabet.make_sequence([1, 2, 1, 3])
+    targetRA.add_transition(4, tau_nat_1213, {0, 1, 2, 3}, 3)
+
+    # go to sink state
+    targetRA.add_transition(5, tau_nat_1, {0}, 3)
+    # targetRA.add_transition(5, tau_nat_1, {0}, 3)
+
+    return targetRA
+
+print(get_example_ra_3().to_dot())
