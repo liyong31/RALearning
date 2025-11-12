@@ -90,7 +90,7 @@ class RegisterAutomatonLearner:
             for ext_prefix, ext_memorable in self.observation_table.extended_row_candidates[idx]:
                 last_letter = ext_prefix.letters[-1]
                 forget_set = self.compute_forget_set(row.row_memorable, last_letter, ext_memorable)
-                print("row.row_memorable", row.row_memorable.append(last_letter))
+                # print("row.row_memorable", row.row_memorable.append(last_letter))
                 self.hypothesis.add_transition(
                     idx,
                     row.row_memorable.append(last_letter),
@@ -171,10 +171,10 @@ class RegisterAutomatonLearner:
 
 if __name__ == "__main__":
     # Example usage
-    ra_example = example.get_example_ra_1()
+    ra_example = example.get_example_ra_2()
     print("Test acceptance:", ra_example.is_accepted(ra_example.alphabet.make_sequence([1, 2, 1, 2])))
 
-    teacher = Teacher(ra_example, example.solve_memorability_query_1)
+    teacher = Teacher(ra_example, example.solve_memorability_query_2)
     learner = RegisterAutomatonLearner(teacher, ra_example.alphabet)
     learner.start_learning()
 

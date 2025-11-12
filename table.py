@@ -135,7 +135,7 @@ class ObservationTable:
             return False
 
         mapper = candidate_memorable.get_bijective_map(reference_row.row_memorable)
-        mapped_prefix = LetterSeq([mapper(l) for l in candidate_prefix.letters])
+        mapped_prefix = self.alphabet.apply_map(candidate_prefix, mapper)
 
         for col_idx, suffix in enumerate(self.table_suffixes):
             joined_seq = mapped_prefix.concat(suffix)
@@ -149,7 +149,7 @@ class ObservationTable:
         """
         Return the index of an existing row equivalent to the candidate row, or -1 if none.
         """
-        self.inconsistent_rows_cache.setdefault((candidate_prefix, candidate_memorable), set())
+        # self.inconsistent_rows_cache.setdefault((candidate_prefix, candidate_memorable), set())
         idx = self.get_row_index(candidate_prefix, candidate_memorable)
         if idx >= 0:
             return idx

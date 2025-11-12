@@ -126,8 +126,8 @@ class LetterSeq:
             # If sequence is empty, create a default letter of value 0
             return LetterSeq([Letter(0, self.letter_type)])
 
-        # Sort letters by value
-        sorted_letters = sorted(self.letters, key=lambda x: x.value)
+        # Sort letters by value, but remove redundant appearances
+        sorted_letters = sorted(set(self.letters), key=lambda x: x.value)
         max_value = sorted_letters[-1].value
         min_value = sorted_letters[0].value
 
@@ -155,6 +155,8 @@ class LetterSeq:
     def concat(self, other: "LetterSeq") -> "LetterSeq":
         if other.letter_type != self.letter_type:
             raise ValueError("Cannot concatenate sequences of different types")
+        if len(other) == 0 and len(self.letters) == 0:
+            return LetterSeq.empty(self.letter_type)
         return LetterSeq(self.letters + other.letters)
 
     # --- Dense mapping ---

@@ -1,5 +1,6 @@
 from typing import List, Set, Dict, Tuple, Optional
 import alphabet
+from alphabet import Alphabet, LetterSeq, Letter
 
 
 # -------------------------------
@@ -10,12 +11,12 @@ import alphabet
 class Transition:
     """Represents a transition (p, τ, E, q) in a Register Automaton."""
 
-    def __init__(self, source: int, tau: alphabet.LetterSeq, indices_to_remove: Set[int], target: int):
-        if not isinstance(tau, alphabet.LetterSeq):
+    def __init__(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int):
+        if not isinstance(tau, LetterSeq):
             raise TypeError("τ must be a LetterSeq")
 
         self.source: int = source
-        self.tau: alphabet.LetterSeq = tau
+        self.tau: LetterSeq = tau
         self.indices_to_remove: Set[int] = set(indices_to_remove)
         self.target: int = target
 
@@ -46,7 +47,7 @@ class Location:
         self.accepting: bool = accepting
         self.transitions: List[Transition] = []
 
-    def add_transition(self, source: int, tau: alphabet.LetterSeq, indices_to_remove: Set[int], target: int) -> None:
+    def add_transition(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int) -> None:
         """Adds a transition if it does not already exist."""
         if source != self.id:
             raise ValueError(f"Transition source {source} does not match location ID {self.id}")
@@ -70,22 +71,22 @@ class Location:
 
 
 # A configuration is (location_id, register_values, last_transition)
-Configuration = Tuple[int, alphabet.LetterSeq, Optional[Transition]]
+Configuration = Tuple[int, LetterSeq, Optional[Transition]]
 
 
 class RegisterAutomaton:
     """A Register Automaton over dense alphabets (ℚ or ℝ)."""
 
-    def __init__(self, alphabet: alphabet.Alphabet):
+    def __init__(self, alphabet: Alphabet):
         self.locations: Dict[int, Location] = {}
         self.initial: Optional[int] = None
-        self.alphabet: alphabet.Alphabet = alphabet
+        self.alphabet: Alphabet = alphabet
 
     # -------------------------------
     #       STRUCTURE MANAGEMENT
     # -------------------------------
 
-    def get_alphabet(self) -> alphabet.Alphabet:
+    def get_alphabet(self) -> Alphabet:
         return self.alphabet
 
     def get_letter_type(self) -> str:
@@ -100,7 +101,7 @@ class RegisterAutomaton:
             raise ValueError(f"Location with ID {loc_id} already exists")
         self.locations[loc_id] = Location(loc_id, name, accepting)
 
-    def add_transition(self, source: int, tau: alphabet.LetterSeq, indices_to_remove: Set[int], target: int) -> None:
+    def add_transition(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int) -> None:
         self._check_location_exists(source)
         self._check_location_exists(target)
         self.locations[source].add_transition(source, tau, indices_to_remove, target)
@@ -120,7 +121,7 @@ class RegisterAutomaton:
     #       EXECUTION & ACCEPTANCE
     # -------------------------------
 
-    def step(self, configuration: Configuration, letter: alphabet.Letter) -> Optional[Configuration]:
+    def step(self, configuration: Configuration, letter: Letter) -> Optional[Configuration]:
         """Advance one step based on the input letter."""
         location_id, register_seq, _ = configuration
         extended_seq = register_seq.append(letter)
@@ -130,14 +131,13 @@ class RegisterAutomaton:
                 continue
             if extended_seq.letter_type != transition.tau.letter_type:
                 continue
-            print(transition.tau, transition.tau.letter_type)
             if self.alphabet.test_type(extended_seq, transition.tau):
                 new_register_seq = extended_seq.remove_by_indices(transition.indices_to_remove)
                 return (transition.target, new_register_seq, transition)
 
         return None  # no valid transition
 
-    def run(self, input_seq: alphabet.LetterSeq) -> List[Configuration]:
+    def run(self, input_seq: LetterSeq) -> List[Configuration]:
         """Simulate the automaton on an input alphabet."""
         if self.initial is None:
             raise ValueError("Initial location not set")
@@ -154,7 +154,7 @@ class RegisterAutomaton:
 
         return configurations
 
-    def is_accepted(self, input_seq: alphabet.LetterSeq) -> bool:
+    def is_accepted(self, input_seq: LetterSeq) -> bool:
         """Check whether the automaton accepts the given alphabet."""
         configs = self.run(input_seq)
         final_location_id, _, _ = configs[-1]
