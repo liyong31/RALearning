@@ -46,8 +46,8 @@ def find_difference(A: RegisterAutomaton, u: LetterSeq, B: RegisterAutomaton, v:
 
         # ---- Step 3: Explore all possible next-letter transitions ----
         # For correctness, we symbolically explore all combinations of next transitions
-        next_letters = set(r1.get_letter_extension(target.alphabet.comparator).letters)
-        next_letters |= set(r2.get_letter_extension(target.alphabet.comparator).letters)
+        next_letters = set(r1.get_letter_extension(A.alphabet.comparator).letters)
+        next_letters |= set(r2.get_letter_extension(B.alphabet.comparator).letters)
         for next_letter in next_letters:
             for t1 in A.locations[l1].transitions:
                 for t2 in B.locations[l2].transitions:
@@ -104,10 +104,10 @@ def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
         # 1. find distinguished word
         suffix = find_distinguishing_seq(target, u, uprime)
         if suffix:
-            print("================= distinguished ==================")
-            print("u", u)
-            print("m(u)", uprime)
-            print("w", suffix)
+            # print("================= distinguished ==================")
+            # print("u", u)
+            # print("m(u)", uprime)
+            # print("w", suffix)
             memorables.add(a)
             
     # only keep largest index of a memorable letter 
@@ -187,8 +187,8 @@ class Teacher:
         reach the same state in the target RegisterAutomaton.
         """
         self.num_memorability_queries = self.num_memorability_queries + 1
-        # seq = get_memorable_seq(self.target, u)
-        seq = self.mem_query_resolver(self.target, u)
+        seq = get_memorable_seq(self.target, u)
+        # seq = self.mem_query_resolver(self.target, u)
         return seq
     
 
