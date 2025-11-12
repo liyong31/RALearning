@@ -5,6 +5,8 @@ import alphabet
 from alphabet import Letter, LetterSeq
 from dra import RegisterAutomaton
 
+import bisect
+
 from collections import deque
 from typing import Optional, List, Tuple
 
@@ -61,7 +63,7 @@ def find_difference(A: RegisterAutomaton, u: LetterSeq, B: RegisterAutomaton, v:
     # No distinguishing word found
     return None
 
-def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterSeq) -> bool:
+def find_distinguishing_seq(target: RegisterAutomaton, u: LetterSeq, v: LetterSeq) -> bool:
     """
     Decide whether there exists a word w such that A accepts uw but not vw.
     u and v must be of the same type (same comparison pattern).
@@ -69,37 +71,52 @@ def find_distinguishing_word(target: RegisterAutomaton, u: LetterSeq, v: LetterS
     return find_difference(target, u, target, v)
 
 def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
-    print("enter memorable seq")
-    bs = u.get_letter_extension(target.alphabet.comparator)
+    # bs = u.get_letter_extension(target.alphabet.comparator)
+    u_sorted = sorted(set(u.letters), key=lambda x: x.value)
     memorables = set()
-    print(bs)
+    
+    # create a find method
+    def find(u: List[Letter], x: Letter) -> int:
+        for i, v in enumerate(u):
+            if v == x:
+                return i
+        return -1
+
     for a in u.letters:
         if a in memorables:
             continue
-        print("checking letter ", a)
+        # compute a letter b such that a != b, yet, u sim_R u'
+        index = find(u_sorted, a)
+        b = None
+        if index == 0:
+            b = target.alphabet.make_letter(a.value - 0.5)
+        elif index == len(u_sorted) - 1:
+            b = target.alphabet.make_letter(a.value + 0.5)
+        else:
+            b = target.alphabet.make_letter((a.value + u_sorted[index + 1].value)/2.0)
+        
         # we try to replace b with a, and check whether map(u) and u can be distinguished by some v
-        for b in bs.letters:
-            if a == b: continue
-            # 1. obtain the map
-            print("replaced letter ", b)
-            sigma = LetterSeq([a]).get_bijective_map(LetterSeq([b]))
-            sigma_u = target.alphabet.apply_map(u, sigma)
-            suffix = find_distinguishing_word(target, u, sigma_u)
-            if suffix:
-                print("================= distinguished ==================")
-                print("u", u)
-                print("m(u)", sigma_u)
-                print("w", suffix)
-                memorables.add(a)
-                break
-    # only keep the memorables
-    print("all memorable letters ", memorables)
+        def replace_a_with_b(c : Letter) -> Letter:
+            if c == a: return b
+            else: return c
+        
+        uprime = target.alphabet.apply_map(u, replace_a_with_b)
+        # 1. find distinguished word
+        suffix = find_distinguishing_seq(target, u, uprime)
+        if suffix:
+            print("================= distinguished ==================")
+            print("u", u)
+            print("m(u)", uprime)
+            print("w", suffix)
+            memorables.add(a)
+            
+    # only keep largest index of a memorable letter 
     mem_map = {}
     for idx, a in enumerate(u.letters):                
         if a in memorables:
             mem_map[a] = idx
-    print("map ", mem_map)
-    print("map values ", mem_map.values())
+    
+    # obtain the corresponding memorable sequence
     result = target.alphabet.empty_sequence()
     for idx, a in enumerate(u.letters):
         if idx in mem_map.values():
