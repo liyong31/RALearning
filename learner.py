@@ -171,10 +171,10 @@ class RegisterAutomatonLearner:
 
 if __name__ == "__main__":
     # Example usage
-    ra_example = example.get_example_ra_2()
+    ra_example = example.get_example_ra_1()
     print("Test acceptance:", ra_example.is_accepted(ra_example.alphabet.make_sequence([1, 2, 1, 2])))
 
-    teacher = Teacher(ra_example, example.solve_memorability_query_2)
+    teacher = Teacher(ra_example, example.solve_memorability_query_1)
     learner = RegisterAutomatonLearner(teacher, ra_example.alphabet)
     learner.start_learning()
 
@@ -202,5 +202,8 @@ if __name__ == "__main__":
         learner.refine_hypothesis(counterexample)
         iteration += 1
 
+    print("#MQ", teacher.num_membership_queries)
+    print("#EQ", teacher.num_equivalence_queries)
+    print("#MM", teacher.num_memorability_queries)
     print("Learning completed.")
     sys.exit(0)

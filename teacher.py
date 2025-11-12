@@ -19,9 +19,13 @@ class Teacher:
                  , mem_query_resolver: Optional[Callable[[RegisterAutomaton, LetterSeq], LetterSeq]] = None):
         self.target = target
         self.mem_query_resolver = mem_query_resolver
+        self.num_membership_queries = 0
+        self.num_equivalence_queries = 0
+        self.num_memorability_queries = 0
 
     def membership_query(self, seq: LetterSeq) -> bool:
         """Return whether the target RA accepts seq under comparator comp."""
+        self.num_membership_queries = self.num_membership_queries + 1
         return self.target.is_accepted(seq)
 
     def _generate_sequences(self, alphabet: Iterable[Letter], max_len: int = 10) -> Iterable[LetterSeq]:
@@ -49,6 +53,7 @@ class Teacher:
             h_ans = hypothesis.is_accepted(seq)
             if t_ans != h_ans:
                 return False, seq
+        self.num_equivalence_queries = self.num_equivalence_queries + 1
         return True, None
 
     def memorability_query(
@@ -61,6 +66,7 @@ class Teacher:
         a different letter b such that the bijective renaming D that maps a to b makes u and D(u)
         reach the same state in the target RegisterAutomaton.
         """
+        self.num_memorability_queries = self.num_memorability_queries + 1
         seq = self.mem_query_resolver(self.target, u)
         return seq
 
