@@ -135,10 +135,9 @@ class Teacher:
     Equivalence is checked by exhaustive testing over the provided alphabet up to max_len.
     For infinite or large alphabets provide a representative alphabet or a custom generator.
     """
-    def __init__(self, target: RegisterAutomaton
-                 , mem_query_resolver: Optional[Callable[[RegisterAutomaton, LetterSeq], LetterSeq]] = None):
+    def __init__(self, target: RegisterAutomaton):
         self.target = target
-        self.mem_query_resolver = mem_query_resolver
+        # self.mem_query_resolver = mem_query_resolver
         self.num_membership_queries = 0
         self.num_equivalence_queries = 0
         self.num_memorability_queries = 0
@@ -214,6 +213,26 @@ if __name__ == "__main__":
         print("sequence:", seq, "mem_seq:", res)
         res1 = get_memorable_seq(target, LetterSeq(seq1))
         print("sequence:", seq1, "mem_seq:", res1)
+        
+        print("-=================")
+        target = example.get_example_ra_2()
+        seq = [0, 1, 0, 1]
+        res = get_memorable_seq(target, target.alphabet.make_sequence(seq))
+        print("sequence:", seq, "mem_seq:", res)
+        seq = [0, 1, 0]
+        res = get_memorable_seq(target, target.alphabet.make_sequence(seq))
+        print("sequence:", seq, "mem_seq:", res)
+        seq = [0, 1]
+        res = get_memorable_seq(target, target.alphabet.make_sequence(seq))
+        print("sequence:", seq, "mem_seq:", res)
+        seq = [0]
+        res = get_memorable_seq(target, target.alphabet.make_sequence(seq))
+        print("sequence:", seq, "mem_seq:", res)
+        
+        seq = [0, 0]
+        res = get_memorable_seq(target, target.alphabet.make_sequence(seq))
+        print("sequence:", seq, "mem_seq:", res)
+
         
 
     except Exception:
