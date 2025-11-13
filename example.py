@@ -219,4 +219,35 @@ def get_example_ra_3():
 
     return targetRA
 
-print(get_example_ra_3().to_dot())
+def get_example_ra_4():
+    """
+    accept a non-empty word in non-decreasing order
+    """
+    alphabet = Alphabet(LetterType.REAL, comp_lt)
+    targetRA = dra.RegisterAutomaton(alphabet)
+
+    targetRA.add_location(0, "ɛ", accepting=False)
+    targetRA.add_location(1, "1", accepting=True)
+    targetRA.add_location(2, "12", accepting=False)
+    
+    targetRA.set_initial(0)
+
+    
+    tau_nat_1 = alphabet.make_sequence([1])
+    targetRA.add_transition(0, tau_nat_1, {}, 1)
+    
+    tau_nat_11 = alphabet.make_sequence([1, 1])
+    targetRA.add_transition(1, tau_nat_11, {0}, 1)
+    tau_nat_12 = alphabet.make_sequence([1, 2])
+    targetRA.add_transition(1, tau_nat_12, {0}, 1)
+    
+    tau_nat_10 = alphabet.make_sequence([1, 0])
+    targetRA.add_transition(1, tau_nat_10, {0,1}, 2)
+
+    targetRA.add_transition(2, tau_nat_1, {0}, 2)
+    
+    return targetRA
+    
+    
+
+# print(get_example_ra_4().to_dot())
