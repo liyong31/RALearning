@@ -87,7 +87,7 @@ def find_difference(
                             A.locations[t1.target].accepting
                             != B.locations[t2.target].accepting
                         ):
-                            return new_w
+                            return A.alphabet.form_sequence(new_w)
                         if (
                             t1.target not in sink_locs_A or t2.target not in sink_locs_B
                         ) and can_add_to_queue(
@@ -241,12 +241,21 @@ class Teacher:
         generated from `alphabet` up to length `max_len`. Returns (True, None) if no
         counterexample found, otherwise (False, counterexample).
         """
-        for seq in self._generate_sequences(alphabet, max_len):
-            t_ans = self.target.is_accepted(seq)
-            h_ans = hypothesis.is_accepted(seq)
-            if t_ans != h_ans:
-                return False, seq
+        # for seq in self._generate_sequences(alphabet, max_len):
+        #     t_ans = self.target.is_accepted(seq)
+        #     h_ans = hypothesis.is_accepted(seq)
+        #     if t_ans != h_ans:
+        #         return False, seq
         self.num_equivalence_queries = self.num_equivalence_queries + 1
+        seq = find_difference(
+            self.target,
+            self.target.alphabet.empty_sequence(),
+            hypothesis,
+            hypothesis.alphabet.empty_sequence(),
+        )
+
+        if seq is not None:
+            return False, seq
         return True, None
 
     def memorability_query(self, u: LetterSeq) -> LetterSeq:
