@@ -1,5 +1,6 @@
 from typing import List, Set, Dict, Tuple, Optional
-import alphabet
+import re
+from typing import TextIO
 from alphabet import Alphabet, LetterSeq, Letter
 
 
@@ -183,7 +184,7 @@ class RegisterAutomaton:
         for loc in self.locations.values():
             for t in loc.transitions:
                 tau_str = str(t.tau)
-                e_str = "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}" if t.indices_to_remove else "∅"
+                e_str = "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}" if t.indices_to_remove else "{}"
                 label = f"{tau_str}, E={e_str}"
                 lines.append(f'  {t.source} -> {t.target} [label="{label}"];')
 
@@ -193,3 +194,81 @@ class RegisterAutomaton:
     def __repr__(self) -> str:
         content = "\n".join(f"  {loc}" for loc in self.locations.values())
         return f"RegisterAutomaton(\n{content}\n)"
+
+    # -------------------------------
+    #          TEXT EXPORT
+    # -------------------------------
+    def to_text(self) -> str:
+        """Return a human-readable text representation."""
+        lines = []
+        lines.append("# Register Automaton")
+        lines.append(f"alphabet: {self.alphabet.letter_type}")
+        lines.append(f"initial: {self.initial}")
+
+        lines.append("locations:")
+        for loc_id, loc in self.locations.items():
+            lines.append(f"  {loc_id} {loc.name} accepting={loc.accepting}")
+
+        lines.append("\ntransitions:")
+        for loc in self.locations.values():
+            for t in loc.transitions:
+                tau_str = ",".join(str(l.value) for l in t.tau.letters)
+                if t.indices_to_remove:
+                    e_str = "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}"
+                else:
+                    e_str = "{}"
+                lines.append(f"  {t.source} -> {t.target} : tau=[{tau_str}], remove={e_str}")
+
+        return "\n".join(lines)
+
+    # -------------------------------
+    #          TEXT PARSING
+    # -------------------------------
+    @classmethod
+    def from_text(cls, text: str, alphabet: Alphabet) -> "RegisterAutomaton":
+        """Parse a RegisterAutomaton from text format."""
+        ra = cls(alphabet)
+
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+
+        current_section = None
+        initial_id = None  # store initial until after adding locations
+
+        for line in lines:
+            if line.startswith("alphabet:"):
+                continue  # alphabet already provided
+            elif line.startswith("initial:"):
+                initial_id = int(line.split(":")[1].strip())
+            elif line == "locations:":
+                current_section = "locs"
+            elif line == "transitions:":
+                current_section = "trans"
+            elif current_section == "locs":
+                parts = line.split()
+                loc_id = int(parts[0])
+                name = parts[1]
+                accepting = parts[2].split("=")[1].lower() == "true"
+                ra.add_location(loc_id, name, accepting)
+            elif current_section == "trans":
+                # Example: 0 -> 1 : tau=[1,2,3], remove={1}
+                m = re.match(r"(\d+)\s*->\s*(\d+)\s*:\s*tau=\[([^\]]*)\],\s*remove=(.*)", line)
+                if not m:
+                    raise ValueError(f"Cannot parse transition line: {line}")
+
+                src, tgt = int(m.group(1)), int(m.group(2))
+                tau_values = [float(x) for x in m.group(3).split(",") if x.strip()]
+                remove_str = m.group(4).strip()
+
+                if remove_str == "{}":
+                    indices = set()
+                else:
+                    indices = set(int(x) for x in re.findall(r"\d+", remove_str))
+
+                tau_seq = LetterSeq([Letter(v, alphabet.letter_type) for v in tau_values])
+                ra.add_transition(src, tau_seq, indices, tgt)
+
+        # Now set the initial state (after all locations are added)
+        if initial_id is not None:
+            ra.set_initial(initial_id)
+
+        return ra

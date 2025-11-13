@@ -148,6 +148,7 @@ class RegisterAutomatonLearner:
             should_add_row = False
             if not self.alphabet.test_type(location_memorable, prefix_memorable):
                 should_add_row = True
+                print("type mismatch...", location_memorable, prefix_memorable)
             else:
                 # should directly add curr_location_prefix and letter?
                 sigma = prefix_memorable.get_bijective_map(location_memorable)

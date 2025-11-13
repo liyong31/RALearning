@@ -68,7 +68,19 @@ if __name__ == "__main__":
     # Example usage
     alphabet = Alphabet(LetterType.REAL, comp_lt)
     generator = RandomRAGenerator(alphabet, seed=42)
-    random_ra = generator.generate(num_locations=3, max_registers=2, max_transitions=5)
+    ra = generator.generate(num_locations=3, max_registers=2, max_transitions=5)
 
     print("Generated Random Register Automaton:")
-    print(random_ra)     
+    print(ra)     
+    print(ra.to_text())
+    
+    text_repr = ra.to_text()
+    with open("ra.txt", "w") as f:
+        f.write(text_repr)
+
+    # Load back
+    with open("ra.txt") as f:
+        text_data = f.read()
+    print("===============================")
+    ra2 = RegisterAutomaton.from_text(text_data, alphabet)
+    print(ra2.to_text())

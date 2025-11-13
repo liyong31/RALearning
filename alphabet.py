@@ -11,8 +11,8 @@ Numeric = Union[float, Fraction]
 #     LETTER TYPES
 # -------------------------------
 class LetterType:
-    RATIONAL = "Q"
-    REAL = "R"
+    RATIONAL = "rational"
+    REAL = "real"
 
 
 # -------------------------------
@@ -21,7 +21,7 @@ class LetterType:
 class Letter:
     def __init__(self, value: Numeric, letter_type: str):
         if letter_type not in {LetterType.RATIONAL, LetterType.REAL}:
-            raise ValueError("letter_type must be 'Q' (rational) or 'R' (real)")
+            raise ValueError("letter_type must be (rational) or (real)")
 
         if letter_type == LetterType.RATIONAL:
             self.value = Fraction(value)
