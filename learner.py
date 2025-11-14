@@ -176,7 +176,7 @@ class RegisterAutomatonLearner:
 
 if __name__ == "__main__":
     # Example usage
-    ra_example = example.get_example_ra_4()
+    ra_example = example.get_example_ra_5()
     print("Test acceptance:", ra_example.is_accepted(ra_example.alphabet.make_sequence([1, 2, 1, 2])))
 
     teacher = Teacher(ra_example)

@@ -217,7 +217,7 @@ class RegisterAutomaton:
                     e_str = "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}"
                 else:
                     e_str = "{}"
-                lines.append(f"  {t.source} -> {t.target} : tau=[{tau_str}], remove={e_str}")
+                lines.append(f"  {t.source} -> {t.target} : tau=[{tau_str}], E={e_str}")
 
         return "\n".join(lines)
 
@@ -250,8 +250,8 @@ class RegisterAutomaton:
                 accepting = parts[2].split("=")[1].lower() == "true"
                 ra.add_location(loc_id, name, accepting)
             elif current_section == "trans":
-                # Example: 0 -> 1 : tau=[1,2,3], remove={1}
-                m = re.match(r"(\d+)\s*->\s*(\d+)\s*:\s*tau=\[([^\]]*)\],\s*remove=(.*)", line)
+                # Example: 0 -> 1 : tau=[1,2,3], E={1}
+                m = re.match(r"(\d+)\s*->\s*(\d+)\s*:\s*tau=\[([^\]]*)\],\s*E=(.*)", line)
                 if not m:
                     raise ValueError(f"Cannot parse transition line: {line}")
 
