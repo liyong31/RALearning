@@ -161,6 +161,74 @@ class RegisterAutomaton:
         configs = self.run(input_seq)
         final_location_id, _, _ = configs[-1]
         return self.locations[final_location_id].accepting
+    
+    def get_sink_rejecting_locations(self) -> Set[int]:
+        """Return the IDs of all sink rejecting locations."""
+        sink_rejecting_ids = set()
+        for loc_id, loc in self.locations.items():
+            if not loc.accepting and all(t.target == loc_id for t in loc.transitions):
+                sink_rejecting_ids.add(loc_id)
+        return sink_rejecting_ids
+    
+    # make automaton complete in terms of transitions
+    def make_complete(self) -> None:
+        """Make the automaton complete by adding a sink rejecting location."""
+        sink_rej_locs = self.get_sink_rejecting_locations()
+        sink_rej_loc = next(iter(sink_rej_locs), -1)
+
+        # by default, we have these assumption:
+        # 1. tau = m l where l is the last letter in the register sequence after appending the input letter
+        # 2. m is the shared sequence for all transitions from that location
+        missing_letters_map: Dict[int, Set[Letter]] = {}
+        memorable_seq_map: Dict[int, LetterSeq] = {}
+        for loc in self.locations.values():
+            if loc.id in sink_rej_locs:
+                continue  # skip existing sink rejecting locations
+
+            # collect all letters used in transitions from this location
+            memorable_seq = None
+            used_letters: Set[Letter] = set()
+            for t in loc.transitions:
+                if len(t.tau) > 0:
+                    used_letters.add(t.tau.letters[-1])  # last letter in tau
+                memorable_seq = t.tau.get_prefix(len(t.tau) - 1)  # all but last letter
+            if memorable_seq is None:
+                memorable_seq = self.alphabet.empty_sequence()
+            memorable_seq_map[loc.id] = memorable_seq
+            # determine missing letters
+            all_letters = set(memorable_seq.get_letter_extension(self.alphabet.comparator).letters) 
+            missing_letters = all_letters - used_letters
+            if missing_letters:
+                missing_letters_map[loc.id] = missing_letters
+            
+        # create sink location
+        if missing_letters_map:
+            if sink_rej_loc >= 0:
+                sink_id = sink_rej_loc
+            else:
+                sink_id = max(self.locations.keys(), default=-1) + 1
+                self.add_location(sink_id, name="sink", accepting=False)
+            memorable_seq_map[sink_id] = self.alphabet.empty_sequence()
+            # add transitions to sink for missing letters
+            for loc_id, missing_letters in missing_letters_map.items():
+                loc = self.locations[loc_id]
+                # get memorable sequence from any transition
+                memorable_seq = memorable_seq_map.get(loc_id, None)
+                for letter in missing_letters:
+                    tau = memorable_seq.append(letter)
+                    loc.add_transition(
+                        source=loc_id,
+                        tau=tau,
+                        indices_to_remove=set(range(len(tau))),  # remove all registers
+                        target=sink_id
+                    )
+            # Add self-loop on sink
+            self.locations[sink_id].add_transition(
+                source=sink_id,
+                tau=self.alphabet.make_sequence([0.0]),  # empty sequence
+                indices_to_remove={0},
+                target=sink_id
+            )
 
     # -------------------------------
     #           EXPORT
@@ -213,7 +281,7 @@ class RegisterAutomaton:
 
         lines.append("locations:")
         for loc_id, loc in self.locations.items():
-            lines.append(f"  {loc_id} {loc.name} accepting={loc.accepting}")
+            lines.append(f"  {loc_id} \"{loc.name}\" accepting={loc.accepting}")
 
         lines.append("\ntransitions:")
         for loc in self.locations.values():
@@ -283,10 +351,13 @@ class RegisterAutomaton:
 
         while i < len(lines) and not lines[i].startswith("transitions"):
             # Format: "<id> <name> accepting=<bool>"
-            toks = lines[i].split()
-            loc_id = int(toks[0])
-            name = toks[1]
-            accepting = toks[2].split("=")[1] == "True"
+            m = re.match(r'(\d+)\s+"([^"]+)"\s+accepting=(True|False)', lines[i])
+            if not m:
+                raise ValueError(f"Cannot parse location line: {lines[i]}")
+
+            loc_id = int(m.group(1))
+            name = m.group(2)
+            accepting = m.group(3) == "True"
 
             ra.add_location(loc_id, name, accepting)
             i += 1

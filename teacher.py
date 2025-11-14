@@ -23,25 +23,9 @@ def find_difference(
         raise Exception("Two automata letter_type mismatch")
 
     # ---- Step 0: Preprocessing, check whether a state is sink rejecting
-    def is_sink_rejecting(loc_id: int, automaton: RegisterAutomaton) -> bool:
-        loc = automaton.locations[loc_id]
-        if loc.accepting:
-            return False
-        for transition in loc.transitions:
-            if transition.target != loc_id:
-                return False
-        return True
 
-    def get_sink_rejecting_locs(automaton: RegisterAutomaton) -> Set[int]:
-        sink_locs = set()
-        for loc_id, loc in automaton.locations.items():
-            if is_sink_rejecting(loc_id, automaton):
-                sink_locs.add(loc_id)
-        return sink_locs
-
-    sink_locs_A = get_sink_rejecting_locs(A)
-    sink_locs_B = get_sink_rejecting_locs(B)
-
+    sink_locs_A = A.get_sink_rejecting_locations()
+    sink_locs_B = B.get_sink_rejecting_locations()
     # ---- Step 1: Compute resulting configurations of u and v ----
     conf_u = A.run(u)[-1]  # (loc_u, reg_u, _)
     conf_v = B.run(v)[-1]  # (loc_v, reg_v, _)
