@@ -89,7 +89,7 @@ class StructuredRandomRAGenerator:
             ra.add_transition(src, tau, indices_to_remove, tgt)
             added_transitions.add(key)
             num_added += 1
-
+        ra.make_complete()
         return ra
 
 
@@ -114,3 +114,11 @@ if __name__ == "__main__":
     print("===============================")
     ra2 = RegisterAutomaton.from_text(text_data)
     print(ra2.to_text())
+    
+    # make complete sure they are the same
+    assert ra.to_text() == ra2.to_text()
+    # print("===============================")
+    # print("Making complete:")
+    # ra2.make_complete()
+    # print(ra2.to_text())
+# --- LetterSeq methods ---
