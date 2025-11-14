@@ -172,36 +172,3 @@ class RegisterAutomatonLearner:
 
         self.close_table()
         self.construct_hypothesis()
-
-
-if __name__ == "__main__":
-    # Example usage
-    ra_example = example.get_example_ra_5()
-    print("Test acceptance:", ra_example.is_accepted(ra_example.alphabet.make_sequence([1, 2, 1, 2])))
-
-    teacher = Teacher(ra_example)
-    learner = RegisterAutomatonLearner(teacher, ra_example.alphabet)
-    learner.start_learning()
-
-    max_iterations = 100
-    iteration = 0
-    while True:
-        hypothesis = learner.get_hypothesis()
-        print("Current Hypothesis:\n", hypothesis.to_dot())
-
-        equivalent, counterexample = teacher.equivalence_query(
-            hypothesis)
-
-        if equivalent :
-            print("Final hypothesis:\n", hypothesis)
-            print(hypothesis.to_dot())
-            break
-
-        learner.refine_hypothesis(counterexample)
-        iteration += 1
-
-    print("#MQ", teacher.num_membership_queries)
-    print("#EQ", teacher.num_equivalence_queries)
-    print("#MM", teacher.num_memorability_queries)
-    print("Learning completed.")
-    sys.exit(0)

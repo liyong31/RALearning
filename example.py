@@ -389,6 +389,6 @@ def get_example_ra_5():
     # Ready!
     return ra
     
-ra = get_example_ra_5()
-print(ra.to_text())
-print(ra.to_dot())
+# ra = get_example_ra_5()
+# print(ra.to_text())
+# print(ra.to_dot())
