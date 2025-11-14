@@ -190,14 +190,7 @@ if __name__ == "__main__":
         print("Current Hypothesis:\n", hypothesis.to_dot())
 
         equivalent, counterexample = teacher.equivalence_query(
-            hypothesis,
-            [Letter(1, alphabet.LetterType.REAL),
-             Letter(2, alphabet.LetterType.REAL),
-             Letter(3, alphabet.LetterType.REAL),
-             Letter(4, alphabet.LetterType.REAL),
-             Letter(0, alphabet.LetterType.REAL)],
-            6
-        )
+            hypothesis)
 
         if equivalent :
             print("Final hypothesis:\n", hypothesis)

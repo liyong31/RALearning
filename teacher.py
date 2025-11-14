@@ -200,7 +200,7 @@ class Teacher:
     """
     Teacher that holds a target RegisterAutomaton and answers:
       - membership_query(seq) -> bool
-      - equivalence_query(hypothesis, alphabet, comp, max_len) -> (is_equivalent, counterexample)
+      - equivalence_query(hypothesis) -> (is_equivalent, counterexample)
       - memorability_query(u) -> bool
 
     Equivalence is checked by exhaustive testing over the provided alphabet up to max_len.
@@ -232,9 +232,7 @@ class Teacher:
 
     def equivalence_query(
         self,
-        hypothesis: RegisterAutomaton,
-        alphabet: Iterable[Letter],
-        max_len: int = 4,
+        hypothesis: RegisterAutomaton
     ) -> Tuple[bool, Optional[LetterSeq]]:
         """
         Heuristic equivalence check: compare hypothesis against target on all sequences
