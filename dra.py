@@ -231,13 +231,14 @@ class RegisterAutomaton:
     #          TEXT PARSING
     # -------------------------------
     @staticmethod
-    def from_text(text: str, alphabet: Alphabet):
+    def from_text(text: str) -> "RegisterAutomaton":
         """
         Parse a RegisterAutomaton from the text format produced by to_text().
         The 'alphabet:' line determines the comparator (< or =).
         """
 
         lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+        alphabet = Alphabet(LetterType.REAL, comp_lt)  # default, will be updated below
         ra = RegisterAutomaton(alphabet)
         
         i = 0

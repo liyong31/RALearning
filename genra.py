@@ -82,5 +82,5 @@ if __name__ == "__main__":
     with open("ra.txt") as f:
         text_data = f.read()
     print("===============================")
-    ra2 = RegisterAutomaton.from_text(text_data, alphabet)
+    ra2 = RegisterAutomaton.from_text(text_data)
     print(ra2.to_text())
