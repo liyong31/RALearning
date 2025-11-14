@@ -1,7 +1,8 @@
+from fractions import Fraction
 from typing import List, Set, Dict, Tuple, Optional
 import re
 from typing import TextIO
-from alphabet import Alphabet, LetterSeq, Letter
+from alphabet import Alphabet, LetterSeq, Letter, LetterType, comp_lt, comp_id
 
 
 # -------------------------------
@@ -202,7 +203,12 @@ class RegisterAutomaton:
         """Return a human-readable text representation."""
         lines = []
         lines.append("# Register Automaton")
-        lines.append(f"alphabet: {self.alphabet.letter_type}")
+        # Alphabet: show ordering or equality comparator
+        if self.alphabet.comparator == comp_lt:
+            comp_str = "<"
+        else:
+            comp_str = "="
+        lines.append(f"alphabet: {self.alphabet.letter_type}, {comp_str}")
         lines.append(f"initial: {self.initial}")
 
         lines.append("locations:")
@@ -224,51 +230,116 @@ class RegisterAutomaton:
     # -------------------------------
     #          TEXT PARSING
     # -------------------------------
-    @classmethod
-    def from_text(cls, text: str, alphabet: Alphabet) -> "RegisterAutomaton":
-        """Parse a RegisterAutomaton from text format."""
-        ra = cls(alphabet)
+    @staticmethod
+    def from_text(text: str, alphabet: Alphabet):
+        """
+        Parse a RegisterAutomaton from the text format produced by to_text().
+        The 'alphabet:' line determines the comparator (< or =).
+        """
 
         lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+        ra = RegisterAutomaton(alphabet)
+        
+        i = 0
+        # the sections must appear in order: alphabet, initial, locations, transitions
+        # --- Parse alphabet line ---
+        if not lines[i].startswith("alphabet:"):
+            raise ValueError("Expected 'alphabet:' line")
+        _, alpha_desc = lines[i].split(":", 1)
+        alpha_desc = alpha_desc.strip()
 
-        current_section = None
-        initial_id = None  # store initial until after adding locations
+        # Expected format: "<type>, <" or "<type>, ="
+        parts = [p.strip() for p in alpha_desc.split(",")]
+        if len(parts) != 2:
+            raise ValueError("Malformed alphabet line")
 
-        for line in lines:
-            if line.startswith("alphabet:"):
-                continue  # alphabet already provided
-            elif line.startswith("initial:"):
-                initial_id = int(line.split(":")[1].strip())
-            elif line == "locations:":
-                current_section = "locs"
-            elif line == "transitions:":
-                current_section = "trans"
-            elif current_section == "locs":
-                parts = line.split()
-                loc_id = int(parts[0])
-                name = parts[1]
-                accepting = parts[2].split("=")[1].lower() == "true"
-                ra.add_location(loc_id, name, accepting)
-            elif current_section == "trans":
-                # Example: 0 -> 1 : tau=[1,2,3], E={1}
-                m = re.match(r"(\d+)\s*->\s*(\d+)\s*:\s*tau=\[([^\]]*)\],\s*E=(.*)", line)
-                if not m:
-                    raise ValueError(f"Cannot parse transition line: {line}")
+        letter_type_str, comp_symbol = parts
 
-                src, tgt = int(m.group(1)), int(m.group(2))
-                tau_values = [float(x) for x in m.group(3).split(",") if x.strip()]
-                remove_str = m.group(4).strip()
+        # Update alphabet letter type
+        alphabet.letter_type = letter_type_str
 
-                if remove_str == "{}":
-                    indices = set()
-                else:
-                    indices = set(int(x) for x in re.findall(r"\d+", remove_str))
+        # Parse comparator symbol
+        if comp_symbol == "<":
+            alphabet.comparator = comp_lt
+        elif comp_symbol == "=":
+            alphabet.comparator = comp_id
+        else:
+            raise ValueError(f"Unknown comparator symbol: {comp_symbol}")
 
-                tau_seq = LetterSeq([Letter(v, alphabet.letter_type) for v in tau_values])
-                ra.add_transition(src, tau_seq, indices, tgt)
+        i += 1
 
-        # Now set the initial state (after all locations are added)
-        if initial_id is not None:
-            ra.set_initial(initial_id)
+        initial_id = -1
+        # --- Parse initial ---
+        if not lines[i].startswith("initial:"):
+            raise ValueError("Expected 'initial:' line")
+        initial_id = int(lines[i].split(":")[1].strip())
+        i += 1
 
+        # --- Parse locations ---
+        if lines[i] != "locations:":
+            raise ValueError("Expected 'locations:' section")
+        i += 1
+
+        while i < len(lines) and not lines[i].startswith("transitions"):
+            # Format: "<id> <name> accepting=<bool>"
+            toks = lines[i].split()
+            loc_id = int(toks[0])
+            name = toks[1]
+            accepting = toks[2].split("=")[1] == "True"
+
+            ra.add_location(loc_id, name, accepting)
+            i += 1
+        # with locations parsed, set initial
+        ra.set_initial(initial_id)
+
+        # --- Parse transitions ---
+        if lines[i] != "transitions:":
+            raise ValueError("Expected 'transitions:' section")
+        i += 1
+
+        while i < len(lines):
+            # Example line:
+            #   0 -> 1 : tau=[1,2], E={0,2}
+            line = lines[i]
+            left, right = line.split(":")
+            left = left.strip()
+            right = right.strip()
+
+            # Parse "0 -> 1"
+            src_str, _, tgt_str = left.split()
+            src, tgt = int(src_str), int(tgt_str)
+
+            # Parse tau list
+            tau_part, e_part = right.split(", E=")
+            tau_str = tau_part.split("=", 1)[1].strip()
+            tau_str = tau_str[1:-1]   # remove [ ]
+
+            if tau_str:
+                x_strs = [x.strip() for x in tau_str.split(",")]
+                x_values = [float(x) if alphabet.letter_type == LetterType.REAL else Fraction(x)
+                            for x in x_strs]
+                tau_letters = [alphabet.make_letter(x)
+                                for x in x_values]
+            else:
+                tau_letters = []
+
+            tau = alphabet.form_sequence(tau_letters)
+
+            # Parse E-set
+            e_str = e_part.strip()
+            e_str = e_str[1:-1]  # remove { }
+
+            if e_str:
+                indices_to_remove = {int(x) for x in e_str.split(",")}
+            else:
+                indices_to_remove = set()
+
+            # Add transition
+            ra.add_transition(
+                source=src,
+                tau=tau,
+                indices_to_remove=indices_to_remove,
+                target=tgt
+            )
+            i += 1
         return ra
