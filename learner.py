@@ -46,9 +46,10 @@ class RegisterAutomatonLearner:
         Iteratively close the observation table until all extended rows have
         a corresponding representative location.
         """
-        self.observation_table.pretty_print()
-        while not self._close_table_once():
-            self.observation_table.pretty_print()
+        # self.observation_table.pretty_print()
+        while True:
+            if self._close_table_once():
+                break
 
     def start_learning(self):
         """
@@ -123,52 +124,111 @@ class RegisterAutomatonLearner:
         """
         Refine the hypothesis using a counterexample sequence that is misclassified.
         """
-        print("Processing counterexample:", counterexample)
+        # print("Processing counterexample:", counterexample)
         target_acceptance = self.teacher.membership_query(counterexample)
         current_location = self.hypothesis.get_initial()
-        current_sequence = self.alphabet.empty_sequence()
-
-        for i, letter in enumerate(counterexample.letters):
-            next_location, next_sequence, _ = self.hypothesis.step(
-                (current_location, current_sequence, None), letter
+        curr_suffix = counterexample
+        
+        while True:
+            u = self.observation_table.table_rows[current_location].row_prefix
+            u_memorable = self.observation_table.table_rows[current_location].row_memorable
+            a = curr_suffix.letters[0]
+            next_location, _, chose_transition = self.hypothesis.step(
+                (current_location, u_memorable, None), a
             )
+           
+            # obtain the last letter b of the chosen transition
+            b = chose_transition.tau.letters[-1]
+            remaining_suffix = curr_suffix.get_suffix(1)
 
-            suffix_seq = (
-                self.alphabet.empty_sequence()
-                if i + 1 == len(counterexample)
-                else counterexample.get_suffix(i + 1)
-            )
+            uprime = self.observation_table.table_rows[next_location].row_prefix
+            uprime_memorable = self.observation_table.table_rows[next_location].row_memorable
 
-            location_memorable = self.observation_table.table_rows[next_location].row_memorable
-            location_prefix = self.observation_table.table_rows[next_location].row_prefix
+            # invariant: MQ(u + a + remaining_suffix) == test_acceptance
+            # chose_transition: Mem(u_memorable + b) ~ uprime_memorable ~ Mem(u_memorable + a)
+            u_memorable_a = u_memorable.append(a)
+            # compute its memorable sequence after forgetting
+            ua_memorable = u_memorable_a.remove_by_indices(
+                chose_transition.indices_to_remove)
 
-            prefix_seq = counterexample.get_prefix(i + 1)
-            prefix_memorable = self.teacher.memorability_query(prefix_seq)
+            # Mem(u_memorable + a) ~ uprime_memorable
+            sigma = ua_memorable.get_bijective_map(uprime_memorable)
+            # map remaining_suffix through sigma
+            mapped_remaining_suffix = self.alphabet.apply_map(remaining_suffix, sigma)
+            # u' sigma(suffix)  
+            join_seq = uprime.concat(mapped_remaining_suffix)
 
-            should_add_row = False
-            if not self.alphabet.test_type(location_memorable, prefix_memorable):
-                should_add_row = True
-                print("type mismatch...", location_memorable, prefix_memorable)
-            else:
-                # should directly add curr_location_prefix and letter?
-                sigma = prefix_memorable.get_bijective_map(location_memorable)
-                mapped_suffix = self.alphabet.apply_map(suffix_seq, sigma)
-                composed_seq = location_prefix.concat(mapped_suffix)
-                if self.teacher.membership_query(composed_seq) != target_acceptance:
-                    should_add_row = True
+            if self.teacher.membership_query(join_seq) != target_acceptance:
+                # we need to choose a suffix that distinguishes ub and u'
+                # but now we are sure that ub is not equivalent to u' 
+                u_a = u.append(a)
+                u_b = u.append(b)
+                sigma = u_a.get_bijective_map(u_b)
+                b_mapped_remaining_suffix = self.alphabet.apply_map(remaining_suffix, sigma)
+                # print("u_a"  , u_a)
+                # print("u_b"  , u_b)
+                # print("b_mapped_remaining_suffix"  , b_mapped_remaining_suffix)
 
-            if should_add_row:
-                mapped_prefix = self.alphabet.apply_map(prefix_seq, sigma)
-                mapped_memorable = self.alphabet.apply_map(prefix_memorable, sigma)
-                self.observation_table.insert_row(mapped_prefix, mapped_memorable)
-                self.observation_table.insert_column(mapped_suffix)
-                # print("next loc", location_prefix)
-                # print("mapped row ", mapped_prefix, mapped_memorable)
-                # print("mapped suffix ", mapped_suffix)
+                # u + a + remaining_suffix ~ u + b + mapped_remaining_suffix
+                # so their membership queries should be the same
+                self.observation_table.insert_column(b_mapped_remaining_suffix)
+                ub_memorable = u_memorable.append(b).remove_by_indices(
+                    chose_transition.indices_to_remove)
+                self.observation_table.insert_row(u_b, ub_memorable)
                 break
-
             current_location = next_location
-            current_sequence = next_sequence
+            curr_suffix = mapped_remaining_suffix
+            # POSTCONDITION: MQ(u' + mapped_remaining_suffix) == target_acceptance
+            # in the end, MQ(u') must differ from target_acceptance
 
         self.close_table()
         self.construct_hypothesis()
+        
+        # old approach: step through the counterexample letter by letter
+        # current_location = self.hypothesis.get_initial()
+        # current_sequence = self.alphabet.empty_sequence()
+        # for i, letter in enumerate(counterexample.letters):
+        #     next_location, next_sequence, _ = self.hypothesis.step(
+        #         (current_location, current_sequence, None), letter
+        #     )
+
+        #     suffix_seq = (
+        #         self.alphabet.empty_sequence()
+        #         if i + 1 == len(counterexample)
+        #         else counterexample.get_suffix(i + 1)
+        #     )
+
+        #     location_memorable = self.observation_table.table_rows[next_location].row_memorable
+        #     location_prefix = self.observation_table.table_rows[next_location].row_prefix
+
+        #     prefix_seq = counterexample.get_prefix(i + 1)
+        #     prefix_memorable = self.teacher.memorability_query(prefix_seq)
+
+        #     should_add_row = False
+        #     if not self.alphabet.test_type(location_memorable, prefix_memorable):
+        #         should_add_row = True
+        #         print("type mismatch...", location_memorable, prefix_memorable)
+        #     else:
+        #         # should directly add curr_location_prefix and letter?
+        #         sigma = prefix_memorable.get_bijective_map(location_memorable)
+        #         mapped_suffix = self.alphabet.apply_map(suffix_seq, sigma)
+        #         composed_seq = location_prefix.concat(mapped_suffix)
+        #         if self.teacher.membership_query(composed_seq) != target_acceptance:
+        #             should_add_row = True
+
+        #     if should_add_row:
+        #         mapped_prefix = self.alphabet.apply_map(prefix_seq, sigma)
+        #         mapped_memorable = self.alphabet.apply_map(prefix_memorable, sigma)
+        #         self.observation_table.insert_row(mapped_prefix, mapped_memorable)
+        #         self.observation_table.insert_column(mapped_suffix)
+        #         # print("next loc", location_prefix)
+        #         # print("mapped row ", mapped_prefix, mapped_memorable)
+        #         # print("mapped suffix ", mapped_suffix)
+        #         break
+
+        #     current_location = next_location
+        #     current_sequence = next_sequence
+        
+        # alternative approach: always add the suffix
+        # suffix_seq = counterexample.get_suffix(i + 1)
+        # self.observation_table.insert_column(suffix_seq)

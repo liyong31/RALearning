@@ -6,6 +6,7 @@ from learner import RegisterAutomatonLearner
 from teacher import Teacher
 import sys
 import re
+import example
 
 # ---------------------------
 # Robust from_text parser
@@ -22,6 +23,8 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
 # ---------------------------
 
 def main():
+    target = example.get_example_ra_5()
+    print(target.to_text())
     parser = argparse.ArgumentParser(description=
                                      "RALT: Read a Register Automaton and learn its minimal canonical form\n"
                                      "using an active learning approach.")
@@ -36,18 +39,20 @@ def main():
     teacher = Teacher(target)
     learner = RegisterAutomatonLearner(teacher, target.alphabet)
     learner.start_learning()
-
-    num_iterations = 0
+    print("Target RA:\n", target.to_dot())
+    num_iterations = 1
     hypothesis = None
     while True:
         hypothesis = learner.get_hypothesis()
+        print(f"Iteration {num_iterations}:")
+        learner.observation_table.pretty_print()
         print("Current Hypothesis:\n", hypothesis.to_dot())
 
         equivalent, counterexample = teacher.equivalence_query(
             hypothesis)
 
         if equivalent :
-            print("Final hypothesis:\n", hypothesis)
+            print("Final Hypothesis:\n")
             print(hypothesis.to_dot())
             break
 

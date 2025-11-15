@@ -218,16 +218,19 @@ class Teacher:
         self,
         hypothesis: RegisterAutomaton
     ) -> Tuple[bool, Optional[LetterSeq]]:
-        """
-        Heuristic equivalence check: compare hypothesis against target on all sequences
-        generated from `alphabet` up to length `max_len`. Returns (True, None) if no
-        counterexample found, otherwise (False, counterexample).
-        """
+        # """
+        # Heuristic equivalence check: compare hypothesis against target on all sequences
+        # generated from `alphabet` up to length `max_len`. Returns (True, None) if no
+        # counterexample found, otherwise (False, counterexample).
+        # """
         # for seq in self._generate_sequences(alphabet, max_len):
         #     t_ans = self.target.is_accepted(seq)
         #     h_ans = hypothesis.is_accepted(seq)
         #     if t_ans != h_ans:
         #         return False, seq
+        """
+        Exact equivalence check between target and hypothesis RegisterAutomata.
+        """
         self.num_equivalence_queries = self.num_equivalence_queries + 1
         seq = find_difference(
             self.target,
@@ -242,10 +245,7 @@ class Teacher:
 
     def memorability_query(self, u: LetterSeq) -> LetterSeq:
         """
-        Heuristic memorability check (placeholder): currently returns the input sequence unchanged.
-        A proper implementation should, for each letter a in u, determine whether there exists
-        a different letter b such that the bijective renaming D that maps a to b makes u and D(u)
-        reach the same state in the target RegisterAutomaton.
+        Exact memorability query: return the memorable subsequence of u
         """
         self.num_memorability_queries = self.num_memorability_queries + 1
         seq = get_memorable_seq(self.target, u)
