@@ -16,6 +16,8 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
     with open(filename, "r", encoding="utf-8") as f:
         text = f.read()
         ra = RegisterAutomaton.from_text(text)
+        # must be complete RA
+        ra.make_complete()
         return ra
 
 # ---------------------------
