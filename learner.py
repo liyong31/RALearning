@@ -139,46 +139,47 @@ class RegisterAutomatonLearner:
            
             # obtain the last letter b of the chosen transition
             b = chose_transition.tau.letters[-1]
-            remaining_suffix = curr_suffix.get_suffix(1)
+            ua_suffix = curr_suffix.get_suffix(1)
+            u_a = u.append(a)
+            u_b = u.append(b)
+            # invariant: ua ~ ub, otherwise the transition would not be chosen
+            # obtian sigma such that sigma(ua) = ub
+            sigma = u_a.get_bijective_map(u_b)
+            ub_suffix = self.alphabet.apply_map(ua_suffix, sigma)
+            # invariant: MQ(u + a + ua_suffix) == MQ(u + b + ub_suffix)
+            # because ua ua_suffix ~ sigma(ua) + sigma(ua_suffix) = ub ub_suffix
+            # print("u_a"  , u_a)
+            # print("u_b"  , u_b)
+            # print("ub_suffix"  , ub_suffix)
 
+            # invariant: MQ(u + a + ua_suffix) == test_acceptance
+            # chose_transition: Mem(u_memorable + b) ~ uprime_memorable ~ Mem(u_memorable + a)
+            u_memorable_b = u_memorable.append(b)
+            # compute its memorable sequence after forgetting
+            ub_memorable = u_memorable_b.remove_by_indices(
+                chose_transition.indices_to_remove)
+            
             uprime = self.observation_table.table_rows[next_location].row_prefix
             uprime_memorable = self.observation_table.table_rows[next_location].row_memorable
 
-            # invariant: MQ(u + a + remaining_suffix) == test_acceptance
-            # chose_transition: Mem(u_memorable + b) ~ uprime_memorable ~ Mem(u_memorable + a)
-            u_memorable_a = u_memorable.append(a)
-            # compute its memorable sequence after forgetting
-            ua_memorable = u_memorable_a.remove_by_indices(
-                chose_transition.indices_to_remove)
-
-            # Mem(u_memorable + a) ~ uprime_memorable
-            sigma = ua_memorable.get_bijective_map(uprime_memorable)
+            # Mem(ub) ~ uprime_memorable
+            sigma = ub_memorable.get_bijective_map(uprime_memorable)
             # map remaining_suffix through sigma
-            mapped_remaining_suffix = self.alphabet.apply_map(remaining_suffix, sigma)
+            uprime_suffix = self.alphabet.apply_map(ub_suffix, sigma)
             # u' sigma(suffix)  
-            join_seq = uprime.concat(mapped_remaining_suffix)
+            join_seq = uprime.concat(uprime_suffix)
 
             if self.teacher.membership_query(join_seq) != target_acceptance:
                 # we need to choose a suffix that distinguishes ub and u'
                 # but now we are sure that ub is not equivalent to u' 
-                u_a = u.append(a)
-                u_b = u.append(b)
-                sigma = u_a.get_bijective_map(u_b)
-                b_mapped_remaining_suffix = self.alphabet.apply_map(remaining_suffix, sigma)
-                # print("u_a"  , u_a)
-                # print("u_b"  , u_b)
-                # print("b_mapped_remaining_suffix"  , b_mapped_remaining_suffix)
-
-                # u + a + remaining_suffix ~ u + b + mapped_remaining_suffix
+                # u' ~ u + b + ub_suffix
                 # so their membership queries should be the same
-                self.observation_table.insert_column(b_mapped_remaining_suffix)
-                ub_memorable = u_memorable.append(b).remove_by_indices(
-                    chose_transition.indices_to_remove)
+                self.observation_table.insert_column(ub_suffix)
                 self.observation_table.insert_row(u_b, ub_memorable)
                 break
             current_location = next_location
-            curr_suffix = mapped_remaining_suffix
-            # POSTCONDITION: MQ(u' + mapped_remaining_suffix) == target_acceptance
+            curr_suffix = uprime_suffix
+            # POSTCONDITION: MQ(u' + b_mapped_remaining_suffix) == target_acceptance
             # in the end, MQ(u') must differ from target_acceptance
 
         self.close_table()
