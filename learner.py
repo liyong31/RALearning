@@ -132,6 +132,9 @@ class RegisterAutomatonLearner:
         while True:
             u = self.observation_table.table_rows[current_location].row_prefix
             u_memorable = self.observation_table.table_rows[current_location].row_memorable
+            if len(curr_suffix) == 0:
+                # reached the end without finding a distinguishing suffix
+                raise RuntimeError("Failed to refine hypothesis with counterexample.")
             a = curr_suffix.letters[0]
             next_location, _, chose_transition = self.hypothesis.step(
                 (current_location, u_memorable, None), a
