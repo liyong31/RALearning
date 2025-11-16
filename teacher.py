@@ -14,6 +14,7 @@ from typing import Optional, List, Tuple
 # equivalence checking between two configurations of two RAs
 def find_difference(
     A: RegisterAutomaton, u: LetterSeq, B: RegisterAutomaton, v: LetterSeq
+    , replace_map: Optional[Callable[[Letter], Letter]] = None
 ) -> Optional[LetterSeq]:
     """
     Decide whether there exists a word w such that A accepts uw but B rejects vw.
@@ -72,6 +73,13 @@ def find_difference(
                             != B.locations[t2.target].accepting
                         ):
                             return A.alphabet.form_sequence(new_w)
+                        if replace_map is not None:
+                            w = A.alphabet.form_sequence(new_w)
+                            mapped_w = A.alphabet.apply_map(w, replace_map)
+                            u_w = u.concat(w)
+                            v_mapped_w = v.concat(mapped_w)
+                            if not A.alphabet.test_type(u_w, v_mapped_w):
+                                continue
                         if (
                             t1.target not in sink_locs_A or t2.target not in sink_locs_B
                         ) and can_add_to_queue(
@@ -125,19 +133,12 @@ def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
     u_sorted = sorted(set(u.letters), key=lambda x: x.value)
     memorables = set()
 
-    # create a find method
-    def find(u: List[Letter], x: Letter) -> int:
-        for i, v in enumerate(u):
-            if v == x:
-                return i
-        return -1
-
     for a in u.letters:
         if a in memorables:
             continue
         # print("check ", a, " memorable ", u)
         # compute a letter b such that a != b, yet, u sim_R u'
-        index = find(u_sorted, a)
+        index = u_sorted.index(a)
         b = None
         if index == 0:
             b = target.alphabet.make_letter(a.value - 0.5)
@@ -156,7 +157,7 @@ def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
         uprime = target.alphabet.apply_map(u, replace_a_with_b)
         # 1. find distinguished word
         # print("u ", u, "up ", uprime)
-        suffix = find_difference(target, u, target, uprime)
+        suffix = find_difference(target, u, target, uprime, replace_map=replace_a_with_b)
         # find_distinguishing_seq(target, u, uprime, a, replace_a_with_b)
         if suffix:
             # print("================= distinguished ==================")

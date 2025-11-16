@@ -3,7 +3,7 @@ from typing import List, Set, Dict, Tuple, Optional
 import re
 from typing import TextIO
 from alphabet import Alphabet, LetterSeq, Letter, LetterType, comp_lt, comp_id
-
+import bisect
 
 # -------------------------------
 #     REGISTER AUTOMATON
@@ -171,6 +171,8 @@ class RegisterAutomaton:
         return sink_rejecting_ids
     
     # make automaton complete in terms of transitions
+    # we need to normalise first, as 3 2 1
+    # NOT DONE yet
     def make_complete(self) -> None:
         """Make the automaton complete by adding a sink rejecting location."""
         sink_rej_locs = self.get_sink_rejecting_locations()
@@ -181,24 +183,53 @@ class RegisterAutomaton:
         # 2. m is the shared sequence for all transitions from that location
         missing_letters_map: Dict[int, Set[Letter]] = {}
         memorable_seq_map: Dict[int, LetterSeq] = {}
+        
+        new_ra = RegisterAutomaton(self.alphabet)
         for loc in self.locations.values():
-            if loc.id in sink_rej_locs:
-                continue  # skip existing sink rejecting locations
-
+            new_ra.add_location(loc.id, loc.name, loc.accepting)
+        new_ra.set_initial(self.initial)
+        for loc in self.locations.values():
             # collect all letters used in transitions from this location
             memorable_seq = None
             used_letters: Set[Letter] = set()
             for t in loc.transitions:
-                if len(t.tau) > 0:
-                    used_letters.add(t.tau.letters[-1])  # last letter in tau
+                if len(t.tau) <= 0:
+                    raise Exception("No letter on the transition")
                 memorable_seq = t.tau.get_prefix(len(t.tau) - 1)  # all but last letter
-            if memorable_seq is None:
-                memorable_seq = self.alphabet.empty_sequence()
-            memorable_seq_map[loc.id] = memorable_seq
-            # determine missing letters
+                # memorable does not contain redandunt letters
+                m_sorted = sorted(memorable_seq.letters, key=lambda x : x.value)
+                normalised_memorable = [m_sorted.index(l) for i, l in enumerate(memorable_seq.letters)]
+                input_letter = t.tau.letters[-1]
+                m_sorted_seq = self.alphabet.form_sequence(m_sorted)
+                idx = m_sorted_seq.index(input_letter)
+                new_letter = None
+                if idx >= 0:
+                    new_letter = self.alphabet.make_letter(idx)
+                else:
+                    # first position where element is greater than input_letter
+                    i = bisect.bisect_right(m_sorted, input_letter)
+                    # that is, it is between i-1 and i
+                    if i == 0:
+                        new_letter = self.alphabet.make_letter(-1)
+                    elif i == len(m_sorted):
+                        new_letter = self.alphabet.make_letter(i)
+                    else:
+                        new_letter = self.alphabet.make_letter((i+ i-1)/2.0)
+                used_letters.add(new_letter)
+                memorable_seq = self.alphabet.make_sequence(normalised_memorable)  
+                new_ra.add_transition(t.source
+                                      , memorable_seq.append(new_letter)
+                                      , t.indices_to_remove
+                                      , t.target)
+                    
+            if len(memorable_seq) > 0:         
+                memorable_seq_map[loc.id] = memorable_seq
+            else:
+                continue
+
             all_letters = set(memorable_seq.get_letter_extension(self.alphabet.comparator).letters) 
             missing_letters = all_letters - used_letters
-            if missing_letters:
+            if missing_letters :
                 missing_letters_map[loc.id] = missing_letters
             
         # create sink location
@@ -206,12 +237,12 @@ class RegisterAutomaton:
             if sink_rej_loc >= 0:
                 sink_id = sink_rej_loc
             else:
-                sink_id = max(self.locations.keys(), default=-1) + 1
-                self.add_location(sink_id, name="sink", accepting=False)
+                sink_id = max(new_ra.locations.keys(), default=-1) + 1
+                new_ra.add_location(sink_id, name="sink", accepting=False)
             memorable_seq_map[sink_id] = self.alphabet.empty_sequence()
             # add transitions to sink for missing letters
             for loc_id, missing_letters in missing_letters_map.items():
-                loc = self.locations[loc_id]
+                loc = new_ra.locations[loc_id]
                 # get memorable sequence from any transition
                 memorable_seq = memorable_seq_map.get(loc_id, None)
                 for letter in missing_letters:
@@ -223,12 +254,13 @@ class RegisterAutomaton:
                         target=sink_id
                     )
             # Add self-loop on sink
-            self.locations[sink_id].add_transition(
+            new_ra.locations[sink_id].add_transition(
                 source=sink_id,
                 tau=self.alphabet.make_sequence([0.0]),  # empty sequence
                 indices_to_remove={0},
                 target=sink_id
             )
+        return new_ra
 
     # -------------------------------
     #           EXPORT

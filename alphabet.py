@@ -36,12 +36,23 @@ class Letter:
         return isinstance(other, Letter) and (
             self.letter_type == other.letter_type and self.value == other.value
         )
+    
+    def __lt__(self, other):
+        if not isinstance(other, Letter):
+            return NotImplemented
+
+        # require same type for comparison
+        if self.letter_type != other.letter_type:
+            raise TypeError("Cannot compare Rational letter with Real letter")
+
+        return self.value < other.value
 
     def __hash__(self):
         return hash((self.value, self.letter_type))
 
     def __repr__(self):
         return f"{self.value}"
+    
 
 
 # -------------------------------
@@ -160,6 +171,12 @@ class LetterSeq:
         if len(other) == 0 and len(self.letters) == 0:
             return LetterSeq.empty(self.letter_type)
         return LetterSeq(self.letters + other.letters)
+    
+    def index(self, x: Letter) -> int:
+        for i, l in enumerate(self.letters):
+            if x == l:
+                return i
+        return -1
 
     # --- Dense mapping ---
     def get_bijective_map(self, other: "LetterSeq") -> Callable[[Letter], Letter]:

@@ -16,8 +16,8 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
     with open(filename, "r", encoding="utf-8") as f:
         text = f.read()
         ra = RegisterAutomaton.from_text(text)
-        # must be complete RA
-        ra.make_complete()
+        # first normalise the automaton
+        new_ra = ra.make_complete()
         return ra
 
 # ---------------------------
@@ -25,8 +25,8 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
 # ---------------------------
 
 def main():
-    target = example.get_example_ra_5()
-    print(target.to_text())
+    # target = example.get_example_ra_5()
+    # print(target.to_text())
     parser = argparse.ArgumentParser(description=
                                      "RALT: Read a Register Automaton and learn its minimal canonical form\n"
                                      "using an active learning approach.")
@@ -57,7 +57,7 @@ def main():
             print("Final Hypothesis:\n")
             print(hypothesis.to_dot())
             break
-
+        print("Counterexample found:", counterexample)
         learner.refine_hypothesis(counterexample)
         num_iterations += 1
 
