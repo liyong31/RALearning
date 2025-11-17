@@ -13,7 +13,9 @@ import bisect
 class Transition:
     """Represents a transition (p, τ, E, q) in a Register Automaton."""
 
-    def __init__(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int):
+    def __init__(
+        self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int
+    ):
         if not isinstance(tau, LetterSeq):
             raise TypeError("τ must be a LetterSeq")
 
@@ -33,11 +35,19 @@ class Transition:
         )
 
     def __hash__(self):
-        return hash((self.source, self.target, self.tau, frozenset(self.indices_to_remove)))
+        return hash(
+            (self.source, self.target, self.tau, frozenset(self.indices_to_remove))
+        )
 
     def __repr__(self) -> str:
-        indices_str = "{" + ",".join(map(str, sorted(self.indices_to_remove))) + "}" if self.indices_to_remove else "∅"
-        return f"Transition({self.source} → {self.target}, τ={self.tau}, E={indices_str})"
+        indices_str = (
+            "{" + ",".join(map(str, sorted(self.indices_to_remove))) + "}"
+            if self.indices_to_remove
+            else "∅"
+        )
+        return (
+            f"Transition({self.source} → {self.target}, τ={self.tau}, E={indices_str})"
+        )
 
 
 class Location:
@@ -49,10 +59,14 @@ class Location:
         self.accepting: bool = accepting
         self.transitions: List[Transition] = []
 
-    def add_transition(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int) -> None:
+    def add_transition(
+        self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int
+    ) -> None:
         """Adds a transition if it does not already exist."""
         if source != self.id:
-            raise ValueError(f"Transition source {source} does not match location ID {self.id}")
+            raise ValueError(
+                f"Transition source {source} does not match location ID {self.id}"
+            )
 
         new_transition = Transition(source, tau, indices_to_remove, target)
         if new_transition not in self.transitions:
@@ -103,7 +117,9 @@ class RegisterAutomaton:
             raise ValueError(f"Location with ID {loc_id} already exists")
         self.locations[loc_id] = Location(loc_id, name, accepting)
 
-    def add_transition(self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int) -> None:
+    def add_transition(
+        self, source: int, tau: LetterSeq, indices_to_remove: Set[int], target: int
+    ) -> None:
         self._check_location_exists(source)
         self._check_location_exists(target)
         self.locations[source].add_transition(source, tau, indices_to_remove, target)
@@ -111,7 +127,7 @@ class RegisterAutomaton:
     def set_initial(self, loc_id: int) -> None:
         self._check_location_exists(loc_id)
         self.initial = loc_id
-        
+
     def get_initial(self) -> int:
         return self.initial
 
@@ -123,7 +139,9 @@ class RegisterAutomaton:
     #       EXECUTION & ACCEPTANCE
     # -------------------------------
 
-    def step(self, configuration: Configuration, letter: Letter) -> Optional[Configuration]:
+    def step(
+        self, configuration: Configuration, letter: Letter
+    ) -> Optional[Configuration]:
         """Advance one step based on the input letter."""
         location_id, register_seq, _ = configuration
         extended_seq = register_seq.append(letter)
@@ -134,7 +152,9 @@ class RegisterAutomaton:
             if extended_seq.letter_type != transition.tau.letter_type:
                 continue
             if self.alphabet.test_type(extended_seq, transition.tau):
-                new_register_seq = extended_seq.remove_by_indices(transition.indices_to_remove)
+                new_register_seq = extended_seq.remove_by_indices(
+                    transition.indices_to_remove
+                )
                 return (transition.target, new_register_seq, transition)
 
         return None  # no valid transition
@@ -144,7 +164,9 @@ class RegisterAutomaton:
         if self.initial is None:
             raise ValueError("Initial location not set")
 
-        configurations: List[Configuration] = [(self.initial, self.alphabet.empty_sequence(), None)]
+        configurations: List[Configuration] = [
+            (self.initial, self.alphabet.empty_sequence(), None)
+        ]
         current = configurations[0]
 
         for letter in input_seq.letters:
@@ -161,7 +183,7 @@ class RegisterAutomaton:
         configs = self.run(input_seq)
         final_location_id, _, _ = configs[-1]
         return self.locations[final_location_id].accepting
-    
+
     def get_sink_rejecting_locations(self) -> Set[int]:
         """Return the IDs of all sink rejecting locations."""
         sink_rejecting_ids = set()
@@ -169,98 +191,141 @@ class RegisterAutomaton:
             if not loc.accepting and all(t.target == loc_id for t in loc.transitions):
                 sink_rejecting_ids.add(loc_id)
         return sink_rejecting_ids
-    
-    # make automaton complete in terms of transitions
-    # we need to normalise first, as 3 2 1
-    # NOT DONE yet
-    def make_complete(self) -> None:
-        """Make the automaton complete by adding a sink rejecting location."""
-        sink_rej_locs = self.get_sink_rejecting_locations()
-        sink_rej_loc = next(iter(sink_rej_locs), -1)
 
-        # by default, we have these assumption:
-        # 1. tau = m l where l is the last letter in the register sequence after appending the input letter
-        # 2. m is the shared sequence for all transitions from that location
-        missing_letters_map: Dict[int, Set[Letter]] = {}
-        memorable_seq_map: Dict[int, LetterSeq] = {}
-        
-        new_ra = RegisterAutomaton(self.alphabet)
+    def get_normalised_dra(self) -> "RegisterAutomaton":
+        """
+        Return a normalised DRA where:
+        - Each outgoing transition from location q has τ = u ⋅ a,
+            where u = canonical memorable prefix and a = canonical input letter.
+        - Canonical u is over [0, 1, 2, ...]
+        - Canonical a is over in {-1, 0, 0.5, ..., |u|}
+        - Missing canonical a values get transitions to a rejecting sink.
+        """
+
+        rejecting_sinks = self.get_sink_rejecting_locations()
+        chosen_sink = next(iter(rejecting_sinks), -1)
+
+        missing_a_map: Dict[int, Set[Letter]] = {}
+        canonical_u_map: Dict[int, LetterSeq] = {}
+
+        normalised = RegisterAutomaton(self.alphabet)
+
+        # copy locations
         for loc in self.locations.values():
-            new_ra.add_location(loc.id, loc.name, loc.accepting)
-        new_ra.set_initial(self.initial)
+            normalised.add_location(loc.id, loc.name, loc.accepting)
+        normalised.set_initial(self.initial)
+
         for loc in self.locations.values():
-            # collect all letters used in transitions from this location
-            memorable_seq = None
-            used_letters: Set[Letter] = set()
-            for t in loc.transitions:
-                if len(t.tau) <= 0:
-                    raise Exception("No letter on the transition")
-                memorable_seq = t.tau.get_prefix(len(t.tau) - 1)  # all but last letter
-                # memorable does not contain redandunt letters
-                m_sorted = sorted(memorable_seq.letters, key=lambda x : x.value)
-                normalised_memorable = [m_sorted.index(l) for i, l in enumerate(memorable_seq.letters)]
-                input_letter = t.tau.letters[-1]
-                m_sorted_seq = self.alphabet.form_sequence(m_sorted)
-                idx = m_sorted_seq.index(input_letter)
-                new_letter = None
-                if idx >= 0:
-                    new_letter = self.alphabet.make_letter(idx)
-                else:
-                    # first position where element is greater than input_letter
-                    i = bisect.bisect_right(m_sorted, input_letter)
-                    # that is, it is between i-1 and i
-                    if i == 0:
-                        new_letter = self.alphabet.make_letter(-1)
-                    elif i == len(m_sorted):
-                        new_letter = self.alphabet.make_letter(i)
-                    else:
-                        new_letter = self.alphabet.make_letter((i+ i-1)/2.0)
-                used_letters.add(new_letter)
-                memorable_seq = self.alphabet.make_sequence(normalised_memorable)  
-                new_ra.add_transition(t.source
-                                      , memorable_seq.append(new_letter)
-                                      , t.indices_to_remove
-                                      , t.target)
-                    
-            if len(memorable_seq) > 0:         
-                memorable_seq_map[loc.id] = memorable_seq
-            else:
+
+            # skip extra rejecting sinks if more than 1 exists
+            if loc.id in rejecting_sinks and loc.id != chosen_sink:
                 continue
+            # print("Normalising location", loc.id, "================================")
+            original_u = None  # u in original letters
+            canonical_u = None  # u in canonical 0,1,2,... letters
+            used_a: Set[Letter] = set()
 
-            all_letters = set(memorable_seq.get_letter_extension(self.alphabet.comparator).letters) 
-            missing_letters = all_letters - used_letters
-            if missing_letters :
-                missing_letters_map[loc.id] = missing_letters
-            
-        # create sink location
-        if missing_letters_map:
-            if sink_rej_loc >= 0:
-                sink_id = sink_rej_loc
+            for trans in loc.transitions:
+                tau = trans.tau
+                if len(tau) == 0:
+                    raise Exception("Transition has empty τ")
+
+                # τ = u ⋅ a
+                u_orig = tau.get_prefix(len(tau) - 1)  # u (original)
+                a_orig = tau.letters[-1]  # a (original)
+
+                # Check shared u assumption
+                if original_u is None:
+                    original_u = u_orig
+                else:
+                    if not self.alphabet.test_type(u_orig, original_u):
+                        raise Exception(
+                            f"Location {loc.id}: outgoing transitions do not share memorable prefix u of the same type"
+                        )
+                # Canonicalise u: sorted unique letters -> index mapping
+                # in theory, u can not contain duplicates, but we handle it anyway
+                u_sorted = sorted(set(original_u.letters), key=lambda x: x.value)
+                letter_to_idx = {letter: i for i, letter in enumerate(u_sorted)}
+                # print("u_sorted", u_sorted)
+                # print("letter_to_idx", letter_to_idx)
+                # Build canonical u
+                u_indices = [letter_to_idx[x] for x in original_u.letters]
+                canonical_u = self.alphabet.make_sequence(u_indices)
+                # print("canonical u", canonical_u)
+                # Canonicalise a via bisect_left over u
+                # the index gives the position in the sorted unique letters
+                insert_pos = bisect.bisect_right(u_sorted, a_orig)
+                a_canon = None
+                if len(u_sorted) <= 0:
+                    # for empty memorable sequence, we only input 0
+                    a_canon = self.alphabet.make_letter(0)
+                elif a_orig in letter_to_idx:
+                    # a is in u
+                    a_canon = self.alphabet.make_letter(letter_to_idx[a_orig])
+                # from here, a not in u and u is not empty
+                elif self.alphabet.comparator == comp_id:
+                    # equality comparator and a not in u
+                    # only need to add a that is greater than all in u
+                    a_canon = self.alphabet.make_letter(len(u_sorted))
+                # from here, comparator is < and a not in u
+                elif insert_pos == 0:
+                    # a is smaller than all memorable letters
+                    a_canon = self.alphabet.make_letter(-1)
+                elif insert_pos >= len(u_sorted):
+                    # a is greater than all memorable letters
+                    a_canon = self.alphabet.make_letter(len(u_sorted))
+                else:
+                    # in between two letters, but smaller than u[insert_pos]
+                    a_canon = self.alphabet.make_letter(insert_pos - 0.5)
+                    
+                used_a.add(a_canon)
+                # Construct canonical τ
+                tau_canon = canonical_u.append(a_canon)
+
+                normalised.add_transition(
+                    trans.source, tau_canon, trans.indices_to_remove, trans.target
+                )
+
+            # adhere to letter extensions for memorable letters
+            expected_a = set(canonical_u.get_letter_extension(self.alphabet.comparator).letters)
+            missing_a = expected_a - used_a
+
+            if missing_a:
+                missing_a_map[loc.id] = missing_a
+
+            canonical_u_map[loc.id] = canonical_u
+
+        # Create or reuse sink for missing transitions
+        if missing_a_map:
+            sink_id: int = -1
+            if chosen_sink >= 0:
+                sink_id = chosen_sink
             else:
-                sink_id = max(new_ra.locations.keys(), default=-1) + 1
-                new_ra.add_location(sink_id, name="sink", accepting=False)
-            memorable_seq_map[sink_id] = self.alphabet.empty_sequence()
-            # add transitions to sink for missing letters
-            for loc_id, missing_letters in missing_letters_map.items():
-                loc = new_ra.locations[loc_id]
-                # get memorable sequence from any transition
-                memorable_seq = memorable_seq_map.get(loc_id, None)
-                for letter in missing_letters:
-                    tau = memorable_seq.append(letter)
-                    loc.add_transition(
-                        source=loc_id,
-                        tau=tau,
-                        indices_to_remove=set(range(len(tau))),  # remove all registers
-                        target=sink_id
-                    )
-            # Add self-loop on sink
-            new_ra.locations[sink_id].add_transition(
-                source=sink_id,
-                tau=self.alphabet.make_sequence([0.0]),  # empty sequence
-                indices_to_remove={0},
-                target=sink_id
+                sink_id = len(normalised.locations.keys())
+                normalised.add_location(sink_id, name="sink", accepting=False)
+
+            canonical_u_map[sink_id] = self.alphabet.empty_sequence()
+
+            # Add transitions to sink for missing a letters
+            for loc_id, missing_a_letters in missing_a_map.items():
+                u_canon = canonical_u_map[loc_id]
+                loc = normalised.locations[loc_id]
+
+                for a in missing_a_letters:
+                    tau_to_sink = u_canon.append(a)
+                    #
+                    # You may want to adjust indices_to_remove here.
+                    #
+                    indices_to_remove = set(range(len(tau_to_sink)))
+                    loc.add_transition(loc_id, tau_to_sink, indices_to_remove, sink_id)
+
+            # Sink self-loop
+            loop_tau = self.alphabet.make_sequence([0])
+            normalised.locations[sink_id].add_transition(
+                sink_id, loop_tau, {0}, sink_id
             )
-        return new_ra
+
+        return normalised
 
     # -------------------------------
     #           EXPORT
@@ -268,7 +333,11 @@ class RegisterAutomaton:
 
     def to_dot(self) -> str:
         """Return a Graphviz DOT representation of the automaton."""
-        lines = ["digraph RegisterAutomaton {", "  rankdir=LR;", "  node [shape=circle, fontsize=12];"]
+        lines = [
+            "digraph RegisterAutomaton {",
+            "  rankdir=LR;",
+            "  node [shape=circle, fontsize=12];",
+        ]
 
         # nodes
         for loc_id, loc in self.locations.items():
@@ -278,14 +347,18 @@ class RegisterAutomaton:
 
         # initial state
         if self.initial is not None:
-            lines.append('  start [shape=point];')
-            lines.append(f'  start -> {self.initial};')
+            lines.append("  start [shape=point];")
+            lines.append(f"  start -> {self.initial};")
 
         # transitions
         for loc in self.locations.values():
             for t in loc.transitions:
                 tau_str = str(t.tau)
-                e_str = "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}" if t.indices_to_remove else "{}"
+                e_str = (
+                    "{" + ",".join(map(str, sorted(t.indices_to_remove))) + "}"
+                    if t.indices_to_remove
+                    else "{}"
+                )
                 label = f"{tau_str}, E={e_str}"
                 lines.append(f'  {t.source} -> {t.target} [label="{label}"];')
 
@@ -313,7 +386,7 @@ class RegisterAutomaton:
 
         lines.append("locations:")
         for loc_id, loc in self.locations.items():
-            lines.append(f"  {loc_id} \"{loc.name}\" accepting={loc.accepting}")
+            lines.append(f'  {loc_id} "{loc.name}" accepting={loc.accepting}')
 
         lines.append("\ntransitions:")
         for loc in self.locations.values():
@@ -337,10 +410,14 @@ class RegisterAutomaton:
         The 'alphabet:' line determines the comparator (< or =).
         """
 
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+        lines = [
+            ln.strip()
+            for ln in text.splitlines()
+            if ln.strip() and not ln.startswith("#")
+        ]
         alphabet = Alphabet(LetterType.REAL, comp_lt)  # default, will be updated below
         ra = RegisterAutomaton(alphabet)
-        
+
         i = 0
         # the sections must appear in order: alphabet, initial, locations, transitions
         # --- Parse alphabet line ---
@@ -416,14 +493,15 @@ class RegisterAutomaton:
             # Parse tau list
             tau_part, e_part = right.split(", E=")
             tau_str = tau_part.split("=", 1)[1].strip()
-            tau_str = tau_str[1:-1]   # remove [ ]
+            tau_str = tau_str[1:-1]  # remove [ ]
 
             if tau_str:
                 x_strs = [x.strip() for x in tau_str.split(",")]
-                x_values = [float(x) if alphabet.letter_type == LetterType.REAL else Fraction(x)
-                            for x in x_strs]
-                tau_letters = [alphabet.make_letter(x)
-                                for x in x_values]
+                x_values = [
+                    float(x) if alphabet.letter_type == LetterType.REAL else Fraction(x)
+                    for x in x_strs
+                ]
+                tau_letters = [alphabet.make_letter(x) for x in x_values]
             else:
                 tau_letters = []
 
@@ -440,10 +518,7 @@ class RegisterAutomaton:
 
             # Add transition
             ra.add_transition(
-                source=src,
-                tau=tau,
-                indices_to_remove=indices_to_remove,
-                target=tgt
+                source=src, tau=tau, indices_to_remove=indices_to_remove, target=tgt
             )
             i += 1
         return ra

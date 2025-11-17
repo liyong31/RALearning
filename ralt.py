@@ -17,8 +17,10 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
         text = f.read()
         ra = RegisterAutomaton.from_text(text)
         # first normalise the automaton
-        new_ra = ra.make_complete()
-        return ra
+        # print(ra.to_text())
+        print("Normalising the input RA...")
+        normalised_ra = ra.get_normalised_dra()
+        return normalised_ra
 
 # ---------------------------
 # Command line parser
@@ -38,33 +40,39 @@ def main():
 
     # Parse input RA
     target = parse_ra_file(args.inp)
+    print("Target DRA:\n", target.to_text())
+
     teacher = Teacher(target)
     learner = RegisterAutomatonLearner(teacher, target.alphabet)
+    print(f"Initialisation ==============================================")
     learner.start_learning()
-    print("Target RA:\n", target.to_dot())
-    num_iterations = 1
+    learner.observation_table.pretty_print()
+
     hypothesis = None
+    num_iterations = 1
     while True:
         hypothesis = learner.get_hypothesis()
-        print(f"Iteration {num_iterations}:")
+        print(f"Iteration {num_iterations} ==============================================")
+        print("Current observation table:\n")
         learner.observation_table.pretty_print()
-        print("Current Hypothesis:\n", hypothesis.to_dot())
+        print("\nCurrent Hypothesis:\n", hypothesis.to_dot())
 
         equivalent, counterexample = teacher.equivalence_query(
             hypothesis)
 
         if equivalent :
-            print("Final Hypothesis:\n")
-            print(hypothesis.to_dot())
             break
         print("Counterexample found:", counterexample)
         learner.refine_hypothesis(counterexample)
         num_iterations += 1
 
+    print(f"Learning completed ==============================================")
+    print("Final Hypothesis:\n")
+    print(hypothesis.to_dot())
+    print("Statistics:")
     print("#MQ", teacher.num_membership_queries)
     print("#EQ", teacher.num_equivalence_queries)
     print("#MM", teacher.num_memorability_queries)
-    print("Learning completed.")
     
     # Write output RA
     if hypothesis is not None:
