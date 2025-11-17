@@ -313,9 +313,6 @@ class RegisterAutomaton:
 
                 for a in missing_a_letters:
                     tau_to_sink = u_canon.append(a)
-                    #
-                    # You may want to adjust indices_to_remove here.
-                    #
                     indices_to_remove = set(range(len(tau_to_sink)))
                     loc.add_transition(loc_id, tau_to_sink, indices_to_remove, sink_id)
 
