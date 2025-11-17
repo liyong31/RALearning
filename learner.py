@@ -177,8 +177,9 @@ class RegisterAutomatonLearner:
                 # but now we are sure that ub is not equivalent to u' 
                 # u' ~ u + b + ub_suffix
                 # so their membership queries should be the same
-                self.observation_table.insert_column(ub_suffix)
-                self.observation_table.insert_row(u_b, ub_memorable)
+                self.observation_table.insert_column(uprime_suffix)
+                # self.observation_table.insert_column(ub_suffix)
+                # self.observation_table.insert_row(u_b, ub_memorable)
                 break
             current_location = next_location
             curr_suffix = uprime_suffix
