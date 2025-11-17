@@ -73,13 +73,13 @@ def find_difference(
                             != B.locations[t2.target].accepting
                         ):
                             return A.alphabet.form_sequence(new_w)
-                        if replace_map is not None:
-                            w = A.alphabet.form_sequence(new_w)
-                            mapped_w = A.alphabet.apply_map(w, replace_map)
-                            u_w = u.concat(w)
-                            v_mapped_w = v.concat(mapped_w)
-                            if not A.alphabet.test_type(u_w, v_mapped_w):
-                                continue
+                        # if replace_map is not None:
+                        #     w = A.alphabet.form_sequence(new_w)
+                        #     mapped_w = A.alphabet.apply_map(w, replace_map)
+                        #     u_w = u.concat(w)
+                        #     v_mapped_w = v.concat(mapped_w)
+                        #     if not A.alphabet.test_type(u_w, v_mapped_w):
+                        #         continue
                         if (
                             t1.target not in sink_locs_A or t2.target not in sink_locs_B
                         ) and can_add_to_queue(

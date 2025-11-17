@@ -40,7 +40,9 @@ def main():
 
     # Parse input RA
     target = parse_ra_file(args.inp)
-    print("Target DRA:\n", target.to_text())
+    print("Input file:", args.inp)
+    print("Target DRA-text:\n", target.to_text())
+    print("Target DRA-dot:\n", target.to_dot())
 
     teacher = Teacher(target)
     learner = RegisterAutomatonLearner(teacher, target.alphabet)

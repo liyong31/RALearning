@@ -22,8 +22,7 @@ class StructuredRandomRAGenerator:
 
     def generate(self,
                  num_states: int = 5,
-                 num_registers: int = 3,
-                 max_transitions: int = 10,
+                #  num_registers: int = 3,
                  accepting_prob: float = 0.3) -> RegisterAutomaton:
 
         ra = RegisterAutomaton(self.alphabet)
@@ -36,19 +35,23 @@ class StructuredRandomRAGenerator:
         sequences = [initial_u]             # existing state labels
         location_map = {str(initial_u): 0}  # map u -> location id
         next_loc_id = 1
+        dest_locs = set()
+        dest_locs.add(0)
 
         added_transitions = set()
-        num_added = 0
 
-        while num_added < max_transitions and len(sequences) < num_states:
+        while len(sequences) < num_states:
             # pick source
             src_idx = random.randrange(len(sequences))
             u = sequences[src_idx]
             src = location_map[str(u)]
+            
+            if len(u) == 1:
+                dest_locs.add(src)
 
             # skip if current state already at max registers
-            if len(u.letters) >= num_registers:
-                continue
+            # if len(u.letters) >= num_registers:
+            #     continue
 
             # get possible letter extensions
             extensions = u.get_letter_extension(self.alphabet.comparator)
@@ -88,9 +91,30 @@ class StructuredRandomRAGenerator:
             # add transition
             ra.add_transition(src, tau, indices_to_remove, tgt)
             added_transitions.add(key)
-            num_added += 1
-        ra.make_complete()
-        return ra
+        
+        # now make sure each location has at least one transition
+        for loc_id, loc in ra.locations.items():
+            if len(loc.transitions) > 0:
+                continue
+                # get possible letter extensions
+            u = sequences[loc_id]
+            extensions = u.get_letter_extension(self.alphabet.comparator)
+            if not extensions:
+                continue
+            # pick random letter l from extensions
+            l = random.choice(extensions.letters)
+            tau = u.append(l)
+            # either go to the initial or one-letter state
+            dest = random.choice(list(dest_locs))
+            indices_to_remove = set()
+            if dest != 0:
+                indices_to_remove = set(range(len(tau)-1))
+            else:
+                indices_to_remove = set(range(len(tau)))
+            ra.add_transition(loc_id, tau, indices_to_remove, dest)
+                
+        
+        return ra.get_normalised_dra()
 
 
     
