@@ -1,7 +1,8 @@
+from email import parser
 import random
 from alphabet import Alphabet, LetterType, Letter, LetterSeq, comp_lt
 from dra import RegisterAutomaton
-
+import sys
 import random
 from alphabet import Alphabet, Letter, LetterSeq
 from dra import RegisterAutomaton
@@ -68,11 +69,19 @@ class StructuredRandomRAGenerator:
                 continue
 
             # randomly choose indices to remove
-            remove_count = random.randint(0, len(tau.letters))
-            indices_to_remove = set(random.sample(range(len(tau.letters)), remove_count)) if remove_count > 0 else set()
-
+            #remove_count = random.randint(0, len(tau.letters))
+            keep_count = random.randint(0, len(tau.letters))
+            indices_to_keep = set(random.sample(range(len(tau.letters)), keep_count)) if keep_count > 0 else set()
+            # indices_to_remove = set(random.sample(range(len(tau.letters)), remove_count)) if remove_count > 0 else set()
+            # letters_to_remove = set([letter for i, letter in enumerate(tau.letters) if i in indices_to_remove])
+            keep_letters = [ l for i, l in enumerate(tau.letters) if i in indices_to_keep]  
+            # for i, letter in enumerate(tau.letters):
+            #     if letter in letters_to_remove:
+            #         indices_to_remove.add(i)
             # compute target label
-            v = tau.remove_by_indices(indices_to_remove)
+            v = self.alphabet.form_sequence(
+                self.keep_last_occurrences(keep_letters))
+            # tau.remove_by_indices(indices_to_remove)
 
             # add target location if new and limit num_states
             v_str = str(v)
@@ -87,7 +96,13 @@ class StructuredRandomRAGenerator:
             else:
                 # cannot add new state, skip
                 continue
-
+            # compute the indices_to_remove
+            indices_keep_map = {l:0 for l in keep_letters}
+            for i, l in enumerate(tau.letters):
+                if l in keep_letters:
+                    indices_keep_map[l] = max(i, indices_keep_map[l])
+            
+            indices_to_remove = set(range(len(tau.letters))) - set(indices_keep_map.values())
             # add transition
             ra.add_transition(src, tau, indices_to_remove, tgt)
             added_transitions.add(key)
@@ -116,24 +131,47 @@ class StructuredRandomRAGenerator:
         
         return ra.get_normalised_dra()
 
-
+    def keep_last_occurrences(self, seq):
+        """
+        Return a list where for each letter in seq,
+        only its last occurrence is kept.
+        Order of surviving letters is preserved.
+        """
+        seen = set()
+        out = []
+        # iterate backwards, collect first time we see a letter (from the end)
+        for x in reversed(seq):
+            if x not in seen:
+                seen.add(x)
+                out.append(x)
+        # reverse again to restore forward order
+        return list(reversed(out))
     
 if __name__ == "__main__":
     # Example usage
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate a random Register Automaton (RA) and output its text representation.")
+    parser.add_argument('--num', type=int, default=6,
+                        help='number of states in the generated RA')
+    parser.add_argument('--seed', type=int, default=0,
+                        help='random seed for RA generation')
+    parser.add_argument('--out', type=str, default='ra.txt',
+                        help='output file to save the RA text representation')
+    args = parser.parse_args()
     alphabet = Alphabet(LetterType.REAL, comp_lt)
-    generator = StructuredRandomRAGenerator(alphabet, seed=42)
-    ra = generator.generate(num_states=6, num_registers=4, max_transitions=20, accepting_prob=0.4)
+    generator = StructuredRandomRAGenerator(alphabet, seed=int(args.seed))
+    ra = generator.generate(num_states=int(args.num), accepting_prob=0.3)
 
     print("Generated Random Register Automaton:")
     print(ra)     
     print(ra.to_text())
     
     text_repr = ra.to_text()
-    with open("ra.txt", "w") as f:
+    with open(args.out, "w") as f:
         f.write(text_repr)
 
     # Load back
-    with open("ra.txt") as f:
+    with open(args.out) as f:
         text_data = f.read()
     print("===============================")
     ra2 = RegisterAutomaton.from_text(text_data)

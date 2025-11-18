@@ -75,7 +75,8 @@ def main():
     print("#MQ", teacher.num_membership_queries)
     print("#EQ", teacher.num_equivalence_queries)
     print("#MM", teacher.num_memorability_queries)
-    
+    print("#States-target:", len(target.locations.keys()))
+    print("#States-hypothesis:", len(hypothesis.locations.keys()))
     # Write output RA
     if hypothesis is not None:
         with open(args.out, "w", encoding="utf-8") as f:
