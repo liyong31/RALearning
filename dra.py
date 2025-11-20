@@ -229,10 +229,6 @@ class RegisterAutomaton:
                 tau = trans.tau
                 if len(tau) == 0:
                     raise Exception("Transition has empty τ")
-                # ignore all transitions to sink
-                # since we will make new ones
-                if trans.target in rejecting_sinks:
-                    continue
 
                 # τ = u ⋅ a
                 u_orig = tau.get_prefix(len(tau) - 1)  # u (original)
@@ -255,6 +251,13 @@ class RegisterAutomaton:
                 # Build canonical u
                 u_indices = [letter_to_idx[x] for x in original_u.letters]
                 canonical_u = self.alphabet.make_sequence(u_indices)
+                
+                # ignore all transitions to sink
+                # since we will make new ones, 
+                # NOTE: we still wants it 
+                # to compute the canonical_u
+                if trans.target in rejecting_sinks:
+                    continue
                 # print("canonical u", canonical_u)
                 # Canonicalise a via bisect_left over u
                 # the index gives the position in the sorted unique letters
@@ -289,7 +292,7 @@ class RegisterAutomaton:
                 normalised.add_transition(
                     trans.source, tau_canon, trans.indices_to_remove, trans.target
                 )
-
+                
             # adhere to letter extensions for memorable letters
             expected_a = set(canonical_u.get_letter_extension(self.alphabet.comparator).letters)
             missing_a = expected_a - used_a
