@@ -21,26 +21,11 @@ def parse_ra_file(filename: str) -> RegisterAutomaton:
         print("Normalising the input RA...")
         normalised_ra = ra.get_normalised_dra()
         return normalised_ra
-
-# ---------------------------
-# Command line parser
-# ---------------------------
-
-def main():
-    # target = example.get_example_ra_5()
-    # print(target.to_text())
-    parser = argparse.ArgumentParser(description=
-                                     "RALT: Read a Register Automaton and learn its minimal canonical form\n"
-                                     "using an active learning approach.")
-    parser.add_argument('--inp', metavar='path', required=True,
-                        help='path to input DRA file')
-    parser.add_argument('--out', metavar='path', required=True,
-                        help='path to output DRA')
-    args = parser.parse_args()
-
+    
+def exectute_learner(inp_name:str, out_name:str) -> None:
     # Parse input RA
-    target = parse_ra_file(args.inp)
-    print("Input file:", args.inp)
+    target = parse_ra_file(inp_name)
+    print("Input file:", inp_name)
     print("Target DRA-text:\n", target.to_text())
     print("Target DRA-dot:\n", target.to_dot())
 
@@ -79,11 +64,30 @@ def main():
     print("#States-hypothesis:", len(hypothesis.locations.keys()))
     # Write output RA
     if hypothesis is not None:
-        with open(args.out, "w", encoding="utf-8") as f:
+        with open(out_name, "w", encoding="utf-8") as f:
             f.write(hypothesis.to_text())
     else:
         print("No hypothesis generated.", file=sys.stderr)
         sys.exit(1)
+
+# ---------------------------
+# Command line parser
+# ---------------------------
+
+def main():
+    # target = example.get_example_ra_5()
+    # print(target.to_text())
+    parser = argparse.ArgumentParser(description=
+                                     "RALT: Read a Register Automaton and learn its minimal canonical form\n"
+                                     "using an active learning approach.")
+    parser.add_argument('--inp', metavar='path', required=True,
+                        help='path to input DRA file')
+    parser.add_argument('--out', metavar='path', required=True,
+                        help='path to output DRA')
+    args = parser.parse_args()
+
+    # Parse input RA
+    exectute_learner(args.inp, args.out)
 
 if __name__ == "__main__":
     main()
