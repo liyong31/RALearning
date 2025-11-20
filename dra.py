@@ -217,8 +217,8 @@ class RegisterAutomaton:
 
         for loc in self.locations.values():
 
-            # skip extra rejecting sinks if more than 1 exists
-            if loc.id in rejecting_sinks and loc.id != chosen_sink:
+            # skip extra rejecting sinks
+            if loc.id in rejecting_sinks:
                 continue
             # print("Normalising location", loc.id, "================================")
             original_u = None  # u in original letters
@@ -229,6 +229,10 @@ class RegisterAutomaton:
                 tau = trans.tau
                 if len(tau) == 0:
                     raise Exception("Transition has empty τ")
+                # ignore all transitions to sink
+                # since we will make new ones
+                if trans.target in rejecting_sinks:
+                    continue
 
                 # τ = u ⋅ a
                 u_orig = tau.get_prefix(len(tau) - 1)  # u (original)
@@ -304,6 +308,7 @@ class RegisterAutomaton:
                 sink_id = len(normalised.locations.keys())
                 normalised.add_location(sink_id, name="sink", accepting=False)
 
+            # sink always corresponds to empty word
             canonical_u_map[sink_id] = self.alphabet.empty_sequence()
 
             # Add transitions to sink for missing a letters
@@ -319,8 +324,8 @@ class RegisterAutomaton:
             # Sink self-loop
             loop_tau = self.alphabet.make_sequence([0])
             normalised.locations[sink_id].add_transition(
-                sink_id, loop_tau, {0}, sink_id
-            )
+                    sink_id, loop_tau, {0}, sink_id
+                )
 
         return normalised
 
