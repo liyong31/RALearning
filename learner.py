@@ -145,19 +145,22 @@ class RegisterAutomatonLearner:
             ua_suffix = curr_suffix.get_suffix(1)
             u_a = u.append(a)
             u_b = u.append(b)
-            # invariant: ua ~ ub, otherwise the transition would not be chosen
-            # obtian sigma such that sigma(ua) = ub
-            sigma = u_a.get_bijective_map(u_b)
+            # invariant: MQ(u + a + ua_suffix) == test_acceptance
+            # chose_transition: Mem(u_memorable + b) ~ uprime_memorable ~ Mem(u_memorable + a)
+            u_memorable_a = u_memorable.append(a)
+            u_memorable_b = u_memorable.append(b)
+            # invariant: M(u)a ~ M(u)b, otherwise the transition would not be chosen
+            # obtian sigma such that sigma(M(u)a) = M(u)b
+            sigma = u_memorable_a.get_bijective_map(u_memorable_b)
             ub_suffix = self.alphabet.apply_map(ua_suffix, sigma)
+            assert self.teacher.membership_query(u_b.concat(ub_suffix)) == target_acceptance, "inconsistent membership"
             # invariant: MQ(u + a + ua_suffix) == MQ(u + b + ub_suffix)
-            # because ua ua_suffix ~ sigma(ua) + sigma(ua_suffix) = ub ub_suffix
+            # because ua ua_suffix and ub ub_suffix have the same run in the target DRA
             # print("u_a"  , u_a)
             # print("u_b"  , u_b)
             # print("ub_suffix"  , ub_suffix)
 
-            # invariant: MQ(u + a + ua_suffix) == test_acceptance
-            # chose_transition: Mem(u_memorable + b) ~ uprime_memorable ~ Mem(u_memorable + a)
-            u_memorable_b = u_memorable.append(b)
+            
             # compute its memorable sequence after forgetting
             ub_memorable = u_memorable_b.remove_by_indices(
                 chose_transition.indices_to_remove)
