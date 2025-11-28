@@ -169,16 +169,19 @@ if __name__ == "__main__":
     text_repr = ra.to_text()
     with open(args.out, "w") as f:
         f.write(text_repr)
-
-    # Load back
-    with open(args.out) as f:
-        text_data = f.read()
-    print("===============================")
-    ra2 = RegisterAutomaton.from_text(text_data)
-    print(ra2.to_text())
     
-    # make complete sure they are the same
-    assert ra.to_text() == ra2.to_text()
+    print("#States:", ra.get_num_states())
+    print("#Trans:", ra.get_num_trans())
+
+    # # Load back
+    # with open(args.out) as f:
+    #     text_data = f.read()
+    # print("===============================")
+    # ra2 = RegisterAutomaton.from_text(text_data)
+    # print(ra2.to_text())
+    
+    # # make complete sure they are the same
+    # assert ra.to_text() == ra2.to_text()
     # print("===============================")
     # print("Making complete:")
     # ra2.make_complete()

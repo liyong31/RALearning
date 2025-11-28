@@ -84,6 +84,9 @@ class Location:
         header = f"Location({self.id}, name={self.name}, accepting={self.accepting})"
         transitions_str = "\n".join(f"  {t}" for t in self.transitions)
         return f"{header}\n{transitions_str}"
+    
+    def get_num_trans(self) -> int:
+        return len(self.transitions)
 
 
 # A configuration is (location_id, register_values, last_transition)
@@ -134,6 +137,15 @@ class RegisterAutomaton:
     def set_final(self, loc_id: int) -> None:
         self._check_location_exists(loc_id)
         self.locations[loc_id].accepting = True
+    
+    def get_num_states(self) -> int:
+        return len(self.locations)
+    
+    def get_num_trans(self) -> int:
+        num_trans = 0
+        for loc_id, loc in self.locations.items():
+            num_trans = num_trans + loc.get_num_trans()
+        return num_trans
 
     # -------------------------------
     #       EXECUTION & ACCEPTANCE

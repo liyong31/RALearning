@@ -60,8 +60,10 @@ def exectute_learner(inp_name:str, out_name:str) -> None:
     print("#MQ", teacher.num_membership_queries)
     print("#EQ", teacher.num_equivalence_queries)
     print("#MM", teacher.num_memorability_queries)
-    print("#States-target:", len(target.locations.keys()))
-    print("#States-hypothesis:", len(hypothesis.locations.keys()))
+    print("#States-target:", target.get_num_states())
+    print("#Trans-target:", target.get_num_trans())
+    print("#States-hypothesis:", hypothesis.get_num_states())
+    print("#Trans-hypothesis:", hypothesis.get_num_trans())
     # Write output RA
     if hypothesis is not None:
         with open(out_name, "w", encoding="utf-8") as f:

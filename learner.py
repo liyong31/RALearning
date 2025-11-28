@@ -167,11 +167,12 @@ class RegisterAutomatonLearner:
             
             uprime = self.observation_table.table_rows[next_location].row_prefix
             uprime_memorable = self.observation_table.table_rows[next_location].row_memorable
-
             # Mem(ub) ~ uprime_memorable
             sigma = ub_memorable.get_bijective_map(uprime_memorable)
             # map remaining_suffix through sigma
             uprime_suffix = self.alphabet.apply_map(ub_suffix, sigma)
+            # print("u'", uprime)
+            # print("uprime_suffix", uprime_suffix)
             # u' sigma(suffix)  
             join_seq = uprime.concat(uprime_suffix)
 
@@ -181,6 +182,7 @@ class RegisterAutomatonLearner:
                 # u' ~ u + b + ub_suffix
                 # so their membership queries should be the same
                 self.observation_table.insert_column(uprime_suffix)
+                # print("added uprime_suffix", uprime_suffix)
                 # self.observation_table.insert_column(ub_suffix)
                 # self.observation_table.insert_row(u_b, ub_memorable)
                 break
