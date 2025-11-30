@@ -8,6 +8,7 @@ python3 ralt.py --inp ra2.txt --out ra.txt
 ``` 
 
 Note that this tool only takes *complete* and *well-typed* DRA as target automaton.
+The completeness and well-typeness properties are required for running a word and testing equivalence of two given configurations.
 
 
 ## The Register Automaton Input Format
