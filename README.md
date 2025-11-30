@@ -15,6 +15,7 @@ The completeness and well-typeness properties are required for running a word an
 
 This input format specifies a **register automaton (RA)** over an ordered data domain. The automaton is defined by its alphabet, initial location, set of locations with associated register value notations, and transitions describing how registers are updated and compared with the input data.
 
+All comments should start with a symbol **#**; the content after will be ignored
 ---
 
 ### Global Header
@@ -30,6 +31,7 @@ alphabet: real, <
 
 #### `initial: 0`
 Indicates the **initial location** of the automaton (location ID `0`).
+The initial state will always be 0.
 
 ---
 
@@ -79,7 +81,7 @@ This means tht the transition from location 1 to location 5 is enabled when the 
 
 ---
 
-An full example of complete and well-typed DRA accepting non-decreasing sequence is given below:
+A full example of complete and well-typed DRA accepting non-decreasing sequence is given below:
 ```
 # Register Automaton
 alphabet: real, <
