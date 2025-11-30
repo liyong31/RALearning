@@ -15,7 +15,8 @@ The completeness and well-typeness properties are required for running a word an
 
 This input format specifies a **register automaton (RA)** over an ordered data domain. The automaton is defined by its alphabet, initial location, set of locations with associated register value notations, and transitions describing how registers are updated and compared with the input data.
 
-All comments should start with a symbol **#**; the content after will be ignored
+All comments should start with a symbol `#`; the content after will be ignored
+
 ---
 
 ### Global Header
