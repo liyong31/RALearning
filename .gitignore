@@ -1,0 +1,55 @@
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+env/
+venv/
+ENV/
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Build / temp
+build/
+dist/
+*.tmp
+*.bak
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Mac TeXShop / Overleaf extras
+*.synctex(busy)
+*.xdv
+
+# Node/JS (if you ever use it)
+node_modules/
+
+# PDFs if auto-generated
+*.pdf
+
+# Data caches
+*.cache
+

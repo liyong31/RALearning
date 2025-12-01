@@ -100,6 +100,11 @@ transitions:
   2 -> 2 : tau=[1.0], E={0}
 ```
 
+---
+
+## Experiments
+
+For information about running experiments (learning $L_n$ languages, randomly generated DRAs, etc.), see the [experiments README](experiments/README.md).
 
 
 
