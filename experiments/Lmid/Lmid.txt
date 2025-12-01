@@ -1,0 +1,22 @@
+# Register Automaton: recognize Lmid = { abc | a < c < b}
+alphabet: real, <
+initial: 0
+locations:
+  0 "ɛ" accepting=False
+  1 "0" accepting=False
+  2 "02" accepting=False
+  3 "021" accepting=True
+  4 "sink" accepting=False
+
+transitions:
+  0 -> 1 : tau=[0], E={}
+  1 -> 2 : tau=[0, 2.0], E={}
+  1 -> 4 : tau=[0, 0], E={0,1}
+  1 -> 4 : tau=[0,-1], E={0,1}
+  2 -> 3 : tau=[0, 2.0, 1.0], E={0,1,2}
+  2 -> 4 : tau=[0, 2.0, -1], E={0,1,2}
+  2 -> 4 : tau=[0, 2.0, 0], E={0,1,2}
+  2 -> 4 : tau=[0, 2.0, 2.0], E={0,1,2}
+  2 -> 4 : tau=[0, 2.0, 3.0], E={0,1,2}
+  3 -> 4 : tau=[0], E={0}
+  4 -> 4 : tau=[0], E={0}

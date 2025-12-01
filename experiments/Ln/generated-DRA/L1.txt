@@ -1,0 +1,12 @@
+# Register Automaton
+alphabet: real, <
+initial: 0
+locations:
+  0 "[]" accepting=False
+  1 "[]" accepting=True
+  2 "sink" accepting=False
+
+transitions:
+  0 -> 1 : tau=[0.0], E={0}
+  1 -> 2 : tau=[0.0], E={0}
+  2 -> 2 : tau=[0.0], E={0}
