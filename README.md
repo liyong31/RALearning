@@ -1,14 +1,16 @@
 # RALearning
 
-RALT (Register Automata Learning Tool) takes as input a deterministic register automaton (DRA) and outputs a minimal canonical DRA.
+RALT (Register Automata Learning Tool) takes as input a deterministic register automaton (DRA) and outputs its minimal canonical form.
 
 Usage:
 ```
 python3 ralt.py --inp ra2.txt --out ra.txt
 ``` 
 
-Note that this tool only takes *complete* and *well-typed* DRA as target automaton.
-The completeness and well-typeness properties are required for running a word and testing equivalence of two given configurations.
+The tool reads a DRA from *ra2.txt* and learns a canonical, minimal, and well-typed DRA in *ra.txt*.
+
+**Note**: RALT requires the input automaton to be both complete and well-typed DRA.
+These properties are necessary for executing words and for checking equivalence between configurations.
 
 
 ## The Register Automaton Input Format
@@ -17,7 +19,6 @@ This input format specifies a **register automaton (RA)** over an ordered data d
 
 All comments should start with a symbol `#`; the content after will be ignored
 
----
 
 ### Global Header
 
@@ -34,7 +35,7 @@ alphabet: real, <
 Indicates the **initial location** of the automaton (location ID `0`).
 The initial state will always be 0.
 
----
+
 
 ### Locations
 
@@ -56,7 +57,7 @@ Example:
 
 This means: location 1 has one register with value 0.0 and is accepting.
 
----
+
 
 ### Transitions
 
@@ -80,7 +81,7 @@ Example:
 This means tht the transition from location 1 to location 5 is enabled when the memorble word concatenated with the input letter matches the pattern `[0.0,1.0]`.
 - The values in registers 0 and 1 are cleared.
 
----
+
 
 A full example of complete and well-typed DRA accepting non-decreasing sequence is given below:
 ```
