@@ -45,8 +45,8 @@ Each location is described by three components:
 ```
 
 - **id**: numeric identifier of the location.  
-- **register valuation**: a list of the values currently stored in the registers at that location.
-  - Example: `"[0.0]"` means the automaton has one register storing `0.0`.
+- **register valuation**: a list of the values currently stored in the registers at that location. **Note** this field is only an annotation and will not be used.
+  - Example: `"[0.0]"` means the automaton has one register storing `0.0`. 
 - **accepting**: Boolean indicating whether the location is accepting.
 
 Example:
