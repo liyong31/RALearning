@@ -1,6 +1,6 @@
 # RALearning
 
-RALT (Register Automata Learning Tool) takes as input a deterministic register automaton (DRA) and outputs its minimal canonical form.
+RALT (Register Automata Learning Tool) takes as input a deterministic register automaton (DRA) and learns its minimal canonical form using membership, equivalence and memorability queries.
 
 Usage:
 ```
