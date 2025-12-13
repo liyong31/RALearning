@@ -177,6 +177,11 @@ class LetterSeq:
             if x == l:
                 return i
         return -1
+    
+    def get_letter(self, i: int) -> Letter:
+        if i < 0 or i >= self.__len__():
+            raise ValueError(f"Index outside the scope {i}")
+        return self.letters[i]
 
     # --- Dense mapping ---
     def get_bijective_map(self, other: "LetterSeq") -> Callable[[Letter], Letter]:

@@ -183,8 +183,9 @@ with open(file_name, 'r') as f:
     cs = CharacteristicSample(dra)
     cs.compute_characteristic_sample()
     sample = rpni.Sample(cs.positives, cs.negatives)
-    A = rpni.dra_passive_learn(sample, dra.alphabet)
+    rpni = rpni.RegisterAutomatonRPNILearner(sample, dra.alphabet)
+    A = rpni.learn()
     print(A.to_dot())
-    
-    rpni.test_consistency(sample, A)
+
+    rpni.test_consistency(A)
     
