@@ -32,6 +32,10 @@ def find_difference(
     conf_v = B.run(v)[-1]  # (loc_v, reg_v, _)
     loc_u, reg_u, _ = conf_u
     loc_v, reg_v, _ = conf_v
+    
+    # if two states have different acceptance status, return empty word
+    if A.locations[loc_u].accepting != B.locations[loc_v].accepting:
+        return A.alphabet.empty_sequence()
 
     # ---- Step 2: BFS over configuration pairs ----
     # Each element in the queue is ((loc1, reg1), (loc2, reg2), w_prefix)
@@ -127,6 +131,32 @@ def can_add_to_queue(
                 return False
     return True
 
+def get_memorable_witness(target: RegisterAutomaton
+                          , u: LetterSeq
+                          , u_sorted: LetterSeq
+                          , a: Letter):
+    index = u_sorted.index(a)
+    b = None
+    if index == 0:
+        b = target.alphabet.make_letter(a.value - 0.5)
+    elif index == len(u_sorted) - 1:
+        b = target.alphabet.make_letter(a.value + 0.5)
+    else:
+        b = target.alphabet.make_letter((a.value + u_sorted[index + 1].value) / 2.0)
+
+    # we try to replace b with a, and check whether map(u) and u can be distinguished by some v
+    def replace_a_with_b(c: Letter) -> Letter:
+        if c == a:
+            return b
+        else:
+            return c
+
+    uprime = target.alphabet.apply_map(u, replace_a_with_b)
+    # 1. find distinguished word
+    # print("u ", u, "up ", uprime)
+    suffix = find_difference(target, u, target, uprime, replace_map=replace_a_with_b)
+    # find_distinguishing_seq(target, u, uprime, a, replace_a_with_b)
+    return (suffix, b, uprime)
 
 def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
     # bs = u.get_letter_extension(target.alphabet.comparator)
@@ -138,26 +168,7 @@ def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
             continue
         # print("check ", a, " memorable ", u)
         # compute a letter b such that a != b, yet, u sim_R u'
-        index = u_sorted.index(a)
-        b = None
-        if index == 0:
-            b = target.alphabet.make_letter(a.value - 0.5)
-        elif index == len(u_sorted) - 1:
-            b = target.alphabet.make_letter(a.value + 0.5)
-        else:
-            b = target.alphabet.make_letter((a.value + u_sorted[index + 1].value) / 2.0)
-
-        # we try to replace b with a, and check whether map(u) and u can be distinguished by some v
-        def replace_a_with_b(c: Letter) -> Letter:
-            if c == a:
-                return b
-            else:
-                return c
-
-        uprime = target.alphabet.apply_map(u, replace_a_with_b)
-        # 1. find distinguished word
-        # print("u ", u, "up ", uprime)
-        suffix = find_difference(target, u, target, uprime, replace_map=replace_a_with_b)
+        suffix, _ , _ = get_memorable_witness(target, u, u_sorted, a)
         # find_distinguishing_seq(target, u, uprime, a, replace_a_with_b)
         if suffix:
             # print("================= distinguished ==================")
