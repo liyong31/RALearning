@@ -1,6 +1,8 @@
 # Sketch: passive learning of a deterministic register automaton (DRA)
 # following the high-level structure of Algorithm 2 / SET_TRANSITION
-# from Balachander, Filiot, Gentilini (CONCUR 2024). See paper for formal defs. :contentReference[oaicite:2]{index=2}
+# from Balachander, Filiot, Gentilini (CONCUR 2024)
+# We modified the algorithm a bit to make it more practical and fix the s-completability check.
+# Yong Li, 2025
 
 from collections import defaultdict, deque
 from dra import RegisterAutomaton, Transition
@@ -51,7 +53,7 @@ class RegisterAutomatonRPNILearner:
         self.sample = sample
         self.alphabet = alphabet
         # add mutable samples for optimization in s-completability check
-        self.mutable_pos = set(sample.pos)
+        self.mutable_pairs = set([(p, n) for p in sample.pos for n in sample.neg])
         self.mutable_neg = set(sample.neg)
         self.is_sample_mutable = False
 
@@ -64,7 +66,7 @@ class RegisterAutomatonRPNILearner:
         for w in self.sample.neg:
             w_seq = dra.alphabet.make_sequence([l for l in list(w)])
             if dra.is_accepted(w_seq):
-                print(f"neg {w} should be accepted")
+                print(f"neg {w} should be rejected")
                 return False
         return True
 
@@ -150,18 +152,18 @@ class RegisterAutomatonRPNILearner:
             # samples that have run in A have been proved to be completable already
             if self.is_sample_mutable:
                 # update mutable samples
-                pos_to_remove = set()
+                pos_neg_to_remove = set()
                 neg_to_remove = set()
-                for w in self.mutable_pos:
+                for (w, z) in self.mutable_pairs:
                     w_seq = self.alphabet.make_sequence(list(w))
-                    if self.has_run(A, w_seq)[0]:
-                        pos_to_remove.add(w)
-                for w in self.mutable_neg:    
-                    w_seq = self.alphabet.make_sequence(list(w))   
-                    if self.has_run(A, w_seq)[0]:
-                        neg_to_remove.add(w)
-                self.mutable_pos -= pos_to_remove
+                    z_seq = self.alphabet.make_sequence(list(z))
+                    neg_removed = self.has_run(A, z_seq)[0]
+                    if neg_removed:
+                        neg_to_remove.add(z)
+                    if neg_removed and self.has_run(A, w_seq)[0]:
+                        pos_neg_to_remove.add((w, z))
                 self.mutable_neg -= neg_to_remove
+                self.mutable_pairs -= pos_neg_to_remove
         print(f"Learning finished in {num_iters} iterations.")
         # print(f"====================== iteration {num_iters} ======================")
         # print(A.to_dot())
@@ -291,63 +293,62 @@ class RegisterAutomatonRPNILearner:
         # 2. check whether there exists w=w1w2 in Pos and z=z1z2 in Neg
         # s.t. (q0, ε) -> w1 -> (q, s) and (q0, ε) -> z1 -> (q, s') with sw2 \sim_R s'z2
         # TODO q has a fixed length of register values, so |w2| = |z2|
-        for w in self.mutable_pos:
-            for z in self.mutable_neg:
-                # print(f"compare {w} and {z}")
-                w_seq = A.alphabet.make_sequence(list(w))
-                # now we fix a state and a suffix for w
-                w_state = A.get_initial()
-                w_reg = A.alphabet.empty_sequence()
-                w_suffix = w_seq
-                while True:
-                    z_seq = A.alphabet.make_sequence(list(z))
-                    assert not A.alphabet.test_type(
-                        w_seq, z_seq
-                    ), f"Error, should not be the same type {w_seq} {z_seq}"
-                    # now we test on z_seq
-                    z_state = A.get_initial()
-                    z_reg = A.alphabet.empty_sequence()
-                    z_suffix = z_seq
+        for (w, z) in self.mutable_pairs: 
+            # print(f"compare {w} and {z}")
+            w_seq = A.alphabet.make_sequence(list(w))
+            # now we fix a state and a suffix for w
+            w_state = A.get_initial()
+            w_reg = A.alphabet.empty_sequence()
+            w_suffix = w_seq
+            while True:
+                z_seq = A.alphabet.make_sequence(list(z))
+                assert not A.alphabet.test_type(
+                    w_seq, z_seq
+                ), f"Error, should not be the same type {w_seq} {z_seq}"
+                # now we test on z_seq
+                z_state = A.get_initial()
+                z_reg = A.alphabet.empty_sequence()
+                z_suffix = z_seq
 
-                    # first, w_suffix and z_suffix cannot be same type at the beginning
-                    for j in range(-1, len(z_seq)):
-                        # if both are do not reading anything, skip
-                        if j == -1 and len(w_suffix) == len(w_seq):
-                            # j == -1 means no letter is read yet for
-                            continue
-                        if j == -1:
-                            z_config = (z_state, z_reg, None)
-                        else:
-                            z_config = A.step((z_state, z_reg, None), z_seq.letters[j])
-                            z_suffix = z_seq.get_suffix(j + 1)
-                        # not possible to reach next state, abort
-                        if z_config is None:
-                            break
-                        z_state, z_reg, _ = z_config
-                        # now compare w and z at current state
-                        if w_state != z_state:
-                            continue
-                        # NOTE newly added test by us, without this condition
-                        # the definition is not sufficient
-                        if not A.alphabet.test_type(w_reg, z_reg):
-                            # two reg do not have the same type
-                            return False
+                # first, w_suffix and z_suffix cannot be same type at the beginning
+                for j in range(-1, len(z_seq)):
+                    # if both are do not reading anything, skip
+                    if j == -1 and len(w_suffix) == len(w_seq):
+                        # j == -1 means no letter is read yet for
+                        continue
+                    if j == -1:
+                        z_config = (z_state, z_reg, None)
+                    else:
+                        z_config = A.step((z_state, z_reg, None), z_seq.letters[j])
+                        z_suffix = z_seq.get_suffix(j + 1)
+                    # not possible to reach next state, abort
+                    if z_config is None:
+                        break
+                    z_state, z_reg, _ = z_config
+                    # now compare w and z at current state
+                    if w_state != z_state:
+                        continue
+                    # NOTE newly added test by us, without this condition
+                    # the definition is not sufficient
+                    if not A.alphabet.test_type(w_reg, z_reg):
+                        # two reg do not have the same type
+                        return False
 
-                        # reach the same state from q0
-                        w_type = w_reg.concat(w_suffix)
-                        z_type = z_reg.concat(z_suffix)
-                        if A.alphabet.test_type(w_type, z_type):
-                            return False
-                    # proceed to next z
-                    # proceed to next letter in w
-                    if len(w_suffix) <= 0:
-                        break
-                    # len(w_suffix) > 0
-                    w_config = A.step((w_state, w_reg, None), w_suffix.letters[0])
-                    if w_config is None:
-                        break
-                    w_state, w_reg, _ = w_config
-                    w_suffix = w_suffix.get_suffix(1)
+                    # reach the same state from q0
+                    w_type = w_reg.concat(w_suffix)
+                    z_type = z_reg.concat(z_suffix)
+                    if A.alphabet.test_type(w_type, z_type):
+                        return False
+                # proceed to next z
+                # proceed to next letter in w
+                if len(w_suffix) <= 0:
+                    break
+                # len(w_suffix) > 0
+                w_config = A.step((w_state, w_reg, None), w_suffix.letters[0])
+                if w_config is None:
+                    break
+                w_state, w_reg, _ = w_config
+                w_suffix = w_suffix.get_suffix(1)
 
         return True
 

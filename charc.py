@@ -184,8 +184,17 @@ with open(file_name, 'r') as f:
     cs.compute_characteristic_sample()
     sample = rpni.Sample(cs.positives, cs.negatives)
     rpni = rpni.RegisterAutomatonRPNILearner(sample, dra.alphabet)
+    rpni.is_sample_mutable = False
     A = rpni.learn()
     print(A.to_dot())
 
     rpni.test_consistency(A)
+    print("#States in learned RA: ", A.get_num_states())
+    print("#Trans in learned RA: ", A.get_num_trans())
+    
+    print("#States in target RA: ", dra.get_num_states())
+    print("#Trans in target RA: ", dra.get_num_trans())
+    
+    epsilon = dra.alphabet.empty_sequence()
+    print("Difference found:", teacher.find_difference(dra, epsilon, A, epsilon, None))
     
