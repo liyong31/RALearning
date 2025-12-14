@@ -50,6 +50,10 @@ class RegisterAutomatonRPNILearner:
     def __init__(self, sample: Sample, alphabet: Alphabet):
         self.sample = sample
         self.alphabet = alphabet
+        # add mutable samples for optimization in s-completability check
+        self.mutable_pos = set(sample.pos)
+        self.mutable_neg = set(sample.neg)
+        self.is_sample_mutable = False
 
     def test_consistency(self, dra: RegisterAutomaton):
         for w in self.sample.pos:
@@ -142,6 +146,22 @@ class RegisterAutomatonRPNILearner:
                     new_to_keep.append(w)
             to_read = deque(new_to_keep)
             num_iters += 1
+            #OPTIMIZATION: optionally update mutable samples for set_transition
+            # samples that have run in A have been proved to be completable already
+            if self.is_sample_mutable:
+                # update mutable samples
+                pos_to_remove = set()
+                neg_to_remove = set()
+                for w in self.mutable_pos:
+                    w_seq = self.alphabet.make_sequence(list(w))
+                    if self.has_run(A, w_seq)[0]:
+                        pos_to_remove.add(w)
+                for w in self.mutable_neg:    
+                    w_seq = self.alphabet.make_sequence(list(w))   
+                    if self.has_run(A, w_seq)[0]:
+                        neg_to_remove.add(w)
+                self.mutable_pos -= pos_to_remove
+                self.mutable_neg -= neg_to_remove
         print(f"Learning finished in {num_iters} iterations.")
         # print(f"====================== iteration {num_iters} ======================")
         # print(A.to_dot())
@@ -251,6 +271,8 @@ class RegisterAutomatonRPNILearner:
         return False
 
     # ---------- S-completability conservative check (sketch) ----------
+    #TODO: if a sample has a run with A, ignore it in future checks
+    # update it in learn()
     def s_completable(self, A: RegisterAutomaton, sample: Sample):
         """
         Conservative check: add the candidate transition to a shallow copy of A,
@@ -261,7 +283,7 @@ class RegisterAutomatonRPNILearner:
         """
         # print(A.to_dot())
         # 1. check whether it overlaps with negatives
-        for w in sample.neg:
+        for w in self.mutable_neg:
             w_seq = A.alphabet.make_sequence(list(w))
             if self.accept(A, w_seq):
                 return False
@@ -269,8 +291,8 @@ class RegisterAutomatonRPNILearner:
         # 2. check whether there exists w=w1w2 in Pos and z=z1z2 in Neg
         # s.t. (q0, ε) -> w1 -> (q, s) and (q0, ε) -> z1 -> (q, s') with sw2 \sim_R s'z2
         # TODO q has a fixed length of register values, so |w2| = |z2|
-        for w in sample.pos:
-            for z in sample.neg:
+        for w in self.mutable_pos:
+            for z in self.mutable_neg:
                 # print(f"compare {w} and {z}")
                 w_seq = A.alphabet.make_sequence(list(w))
                 # now we fix a state and a suffix for w
