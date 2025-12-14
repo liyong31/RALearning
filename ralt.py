@@ -98,7 +98,7 @@ def execute_passive_learner(log_printer: LogPrinter, inp_name:str, out_name:str)
         f.write(hypothesis.to_text())
     log_printer.info(f"Hypothesis RA written to {out_name}")   
     
-def execute_active_learner(log_printer: LogPrinter, mode: Mode, inp_name:str, out_name:str) -> None:
+def execute_active_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None:
     # Parse input RA
     target = parse_ra_file(log_printer, inp_name)
     log_printer.info("Input file:", inp_name)
