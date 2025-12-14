@@ -7,7 +7,7 @@ from teacher import Teacher
 import sys
 import re
 import example
-from log import LogPrinter, LogLevel, SimpleLogger
+from log import LogPrinter, LogLevel, SimpleLogger # type: ignore
 
 # ---------------------------
 # Robust from_text parser
@@ -41,9 +41,9 @@ def execute_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None
     while True:
         hypothesis = learner.get_hypothesis()
         log_printer.info(f"Iteration {num_iterations} ==============================================")
-        log_printer.info("Current observation table:\n")
+        log_printer.info("Current observation table:")
         learner.observation_table.pretty_print(log_printer.info)
-        log_printer.debug("\nCurrent Hypothesis:\n", hypothesis.to_dot())
+        log_printer.debug("Current Hypothesis:\n", hypothesis.to_dot())
 
         equivalent, counterexample = teacher.equivalence_query(
             hypothesis)
@@ -55,27 +55,26 @@ def execute_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None
         num_iterations += 1
 
     log_printer.info(f"Learning completed ==============================================")
-    log_printer.debug("Final Hypothesis:\n")
-    log_printer.debug(hypothesis.to_dot())
-    print("Query Statistics:")
-    print(f"#MQ: {teacher.num_membership_queries}")
-    print(f"#EQ: {teacher.num_equivalence_queries}")
-    print(f"#MM: {teacher.num_memorability_queries}")
-    print()
-    print("Target Automaton:")
-    print(f"#States: {target.get_num_states()}")
-    print(f"#Trans: {target.get_num_trans()}")
-    print()
-    print("Hypothesis Automaton:")
-    print(f"#States: {hypothesis.get_num_states()}")
-    print(f"#Trans: {hypothesis.get_num_trans()}")
+    log_printer.debug("Final Hypothesis:\n", hypothesis.to_dot())
+    log_printer.force("Query Statistics:")
+    log_printer.force(f"#MQ: {teacher.num_membership_queries}")
+    log_printer.force(f"#EQ: {teacher.num_equivalence_queries}")
+    log_printer.force(f"#MM: {teacher.num_memorability_queries}")
+    # log_printer.force()
+    log_printer.force("Target Automaton:")
+    log_printer.force(f"#States: {target.get_num_states()}")
+    log_printer.force(f"#Trans: {target.get_num_trans()}")
+    # log_printer.force()
+    log_printer.force("Hypothesis Automaton:")
+    log_printer.force(f"#States: {hypothesis.get_num_states()}")
+    log_printer.force(f"#Trans: {hypothesis.get_num_trans()}")
     
     # Write output RA
     if hypothesis is not None:
         with open(out_name, "w", encoding="utf-8") as f:
             f.write(hypothesis.to_text())
     else:
-        print("No hypothesis generated.", file=sys.stderr)
+        log_printer.error("No hypothesis generated.", file=sys.stderr)
         sys.exit(1)
 
 # ---------------------------

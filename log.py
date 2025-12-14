@@ -91,6 +91,22 @@ class LogPrinter:
 
     def error(self, *args: Any):
         self._logger.error(self._join(*args))
+    
+    def force(self, *args: Any):
+        """
+        Emit a message regardless of SILENT level.
+        """
+        record = self._logger.makeRecord(
+            name=self._logger.name,
+            level=logging.INFO,
+            fn="",
+            lno=0,
+            msg=self._join(*args),
+            args=None,
+            exc_info=None,
+        )
+        for handler in self._logger.handlers:
+            handler.handle(record)
 
     @property
     def raw(self) -> logging.Logger:
@@ -138,7 +154,7 @@ class LogPrinter:
 # x_ = 123
 # log_print.warn(f"a warning message {x_}")
 # log.set_level(LogLevel.SILENT)
-# log_print.info("not shown")
+# log_print.force("shown anyway")
 
 # print = log_print
 
