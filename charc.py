@@ -173,28 +173,3 @@ class CharacteristicSample:
                 self.positives.append([ l.value for l in w.letters])
             else:
                 self.negatives.append([ l.value for l in w.letters])
-
-# file_name = "./canos/exam8.txt"
-# with open(file_name, 'r') as f:
-#     text = f.read()
-#     dra = RegisterAutomaton.from_text(text)
-#     print(dra.to_dot())
-#     print("=========================")
-#     cs = CharacteristicSample(dra)
-#     cs.compute_characteristic_sample()
-#     sample = rpni.Sample(cs.positives, cs.negatives)
-#     rpni = rpni.RegisterAutomatonRPNILearner(sample, dra.alphabet)
-#     rpni.is_sample_mutable = True
-#     A = rpni.learn()
-#     print(A.to_dot())
-
-#     rpni.test_consistency(A)
-#     print("#States in learned RA: ", A.get_num_states())
-#     print("#Trans in learned RA: ", A.get_num_trans())
-    
-#     print("#States in target RA: ", dra.get_num_states())
-#     print("#Trans in target RA: ", dra.get_num_trans())
-    
-#     epsilon = dra.alphabet.empty_sequence()
-#     print("Difference found:", teacher.find_difference(dra, epsilon, A, epsilon, None))
-    

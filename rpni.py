@@ -93,10 +93,10 @@ class RegisterAutomatonRPNILearner:
         # maintain set of seen prefixes that are readable
         readable = set()
         readable.add(tuple())  # empty word readable
-        num_iters = 0
+        self.num_iters = 0
         while to_read:
             # print(
-            #     f"====================== iteration {num_iters} ======================"
+            #     f"====================== iteration {self.num_iters} ======================"
             # )
             ua = to_read.popleft()
             # find u and a such that ua = u + (a,)
@@ -147,7 +147,7 @@ class RegisterAutomatonRPNILearner:
                     # GUARANTEE 1: a word w in to_read does not have proper run in A
                     new_to_keep.append(w)
             to_read = deque(new_to_keep)
-            num_iters += 1
+            self.num_iters += 1
             #OPTIMIZATION: optionally update mutable samples for set_transition
             # samples that have run in A have been proved to be completable already
             if self.is_sample_mutable:
@@ -164,8 +164,8 @@ class RegisterAutomatonRPNILearner:
                         pos_neg_to_remove.add((w, z))
                 self.mutable_neg -= neg_to_remove
                 self.mutable_pairs -= pos_neg_to_remove
-        print(f"Learning finished in {num_iters} iterations.")
-        # print(f"====================== iteration {num_iters} ======================")
+        # print(f"Learning finished in {self.num_iters} iterations.")
+        # print(f"====================== iteration {self.num_iters} ======================")
         # print(A.to_dot())
         return A
 

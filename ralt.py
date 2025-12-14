@@ -92,11 +92,11 @@ def execute_passive_learner(log_printer: LogPrinter, inp_name:str, out_name:str)
     learner.is_sample_mutable = True
     log_printer.info("Learning RA from sample...")
     hypothesis = learner.learn()
-    
+    log_printer.info(f"Learning completed in {learner.num_iters} iterations")
     # Write output RA
     with open(out_name, "w", encoding="utf-8") as f:
         f.write(hypothesis.to_text())
-    log_printer.info(f"Hypothesis RA written to {out_name}.")   
+    log_printer.info(f"Hypothesis RA written to {out_name}")   
     
 def execute_active_learner(log_printer: LogPrinter, mode: Mode, inp_name:str, out_name:str) -> None:
     # Parse input RA
