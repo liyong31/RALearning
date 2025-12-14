@@ -137,7 +137,7 @@ class RegisterAutomatonRPNILearner:
             new_to_keep = []
             for w in list(to_read):
                 w_seq = self.alphabet.make_sequence(list(w))
-                succesful, state = self.has_run(A, w_seq)
+                succesful, state = A.has_run(w_seq)
                 # print(f" {w} has arun: ", succesful, state)
                 if succesful:
                     # GUARANTEE 3: A is (Pos\to_read, Neg)-consistent
@@ -157,10 +157,10 @@ class RegisterAutomatonRPNILearner:
                 for (w, z) in self.mutable_pairs:
                     w_seq = self.alphabet.make_sequence(list(w))
                     z_seq = self.alphabet.make_sequence(list(z))
-                    neg_removed = self.has_run(A, z_seq)[0]
+                    neg_removed = A.has_run(z_seq)[0]
                     if neg_removed:
                         neg_to_remove.add(z)
-                    if neg_removed and self.has_run(A, w_seq)[0]:
+                    if neg_removed and A.has_run( w_seq)[0]:
                         pos_neg_to_remove.add((w, z))
                 self.mutable_neg -= neg_to_remove
                 self.mutable_pairs -= pos_neg_to_remove
@@ -168,24 +168,6 @@ class RegisterAutomatonRPNILearner:
         # print(f"====================== iteration {num_iters} ======================")
         # print(A.to_dot())
         return A
-
-    def copy_dra(self, A: RegisterAutomaton):
-        B = RegisterAutomaton(A.alphabet)
-        for i in range(A.get_num_states()):
-            B.add_location(
-                A.locations[i].id, A.locations[i].name, A.locations[i].accepting
-            )
-        B.set_initial(A.get_initial())
-
-        for i in range(A.get_num_states()):
-            for t in A.locations[i].transitions:
-                src = t.source
-                tgt = t.target
-                tau = A.alphabet.form_sequence(t.tau.letters + [])
-                E = set(t.indices_to_remove)
-                B.locations[i].add_transition(src, tau, E, tgt)
-
-        return B
 
     # ---------- SET_TRANSITION  ----------
     def set_transition(
@@ -221,7 +203,7 @@ class RegisterAutomatonRPNILearner:
         while len(try_erase) > 0:
             h = try_erase.pop()
             # copy current automaton
-            Aprime = self.copy_dra(A)
+            Aprime = A.clone()
             f = Aprime.get_num_states()
             # by default it is not accepting?
             Aprime.add_location(f, str(f), False)
@@ -239,7 +221,7 @@ class RegisterAutomatonRPNILearner:
             # the next state must have same length for the register size
             if reg_size_map[p] != new_reg_size:
                 continue
-            Aprime = self.copy_dra(A)
+            Aprime = A.clone()
             # print(f"Trying to set transition ({q}, {tau}, {to_erase}, {p})")
             Aprime.add_transition(q, tau, to_erase, p)
             if self.s_completable(Aprime, sample):
@@ -248,22 +230,6 @@ class RegisterAutomatonRPNILearner:
         # no existing target works -> create fresh state
         new_p = A.get_num_states()
         return Transition(q, tau, to_erase, new_p)
-
-    def has_run(self, A: RegisterAutomaton, word: LetterSeq):
-        current = (A.get_initial(), A.get_alphabet().empty_sequence(), None)
-        for letter in word.letters:
-            next_config = A.step(current, letter)
-            if next_config is None:
-                return (False, None)
-            current = next_config
-
-        return (True, current[0])
-
-    def accept(self, A: RegisterAutomaton, word: LetterSeq):
-        succesful, state = self.has_run(A, word)
-        if succesful:
-            return A.locations[state].accepting
-        return False
 
     def search(self, alphabet: Alphabet, w_seq: LetterSeq, sample: Sample):
         for wp in sample.pos:
@@ -287,7 +253,7 @@ class RegisterAutomatonRPNILearner:
         # 1. check whether it overlaps with negatives
         for w in self.mutable_neg:
             w_seq = A.alphabet.make_sequence(list(w))
-            if self.accept(A, w_seq):
+            if A.is_accepted(w_seq):
                 return False
 
         # 2. check whether there exists w=w1w2 in Pos and z=z1z2 in Neg

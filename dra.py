@@ -138,6 +138,9 @@ class RegisterAutomaton:
         self._check_location_exists(loc_id)
         self.locations[loc_id].accepting = True
     
+    # -------------------------------
+    #       untilities
+    # -------------------------------
     def get_num_states(self) -> int:
         return len(self.locations)
     
@@ -146,7 +149,28 @@ class RegisterAutomaton:
         for loc_id, loc in self.locations.items():
             num_trans = num_trans + loc.get_num_trans()
         return num_trans
+    
+    def clone(self) -> "RegisterAutomaton":
+        """Create a deep copy of the automaton."""
+        res = RegisterAutomaton(self.alphabet)
+        for i in range(self.get_num_states()):
+            res.add_location(
+                self.locations[i].id
+                , self.locations[i].name
+                , self.locations[i].accepting
+            )
+        res.set_initial(self.get_initial())
 
+        for i in range(self.get_num_states()):
+            for t in self.locations[i].transitions:
+                src = t.source
+                tgt = t.target
+                tau = self.alphabet.form_sequence(t.tau.letters + [])
+                E = set(t.indices_to_remove)
+                res.locations[i].add_transition(src, tau, E, tgt)
+
+        return res   
+    
     # -------------------------------
     #       EXECUTION & ACCEPTANCE
     # -------------------------------
@@ -189,12 +213,22 @@ class RegisterAutomaton:
             current = next_config
 
         return configurations
+    
+    def has_run(self, input_seq: LetterSeq) -> Tuple[bool, List[Configuration]]:
+        """Check whether the automaton can run on the given alphabet."""
+        configs = self.run(input_seq)
+        last_cfg = configs[-1]
+        location_id, _, _ = last_cfg
+        if len(configs) == len(input_seq) + 1:
+            return (True, location_id)
+        return (False, None)
 
     def is_accepted(self, input_seq: LetterSeq) -> bool:
         """Check whether the automaton accepts the given alphabet."""
-        configs = self.run(input_seq)
-        final_location_id, _, _ = configs[-1]
-        return self.locations[final_location_id].accepting
+        can_run, location_id = self.has_run(input_seq)
+        if not can_run:
+            return False
+        return self.locations[location_id].accepting
 
     def get_sink_rejecting_locations(self) -> Set[int]:
         """Return the IDs of all sink rejecting locations."""
