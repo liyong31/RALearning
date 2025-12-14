@@ -7,63 +7,69 @@ from teacher import Teacher
 import sys
 import re
 import example
+from log import LogPrinter, LogLevel, SimpleLogger
 
 # ---------------------------
 # Robust from_text parser
 # ---------------------------
 
-def parse_ra_file(filename: str) -> RegisterAutomaton:
+def parse_ra_file(log_printer: LogPrinter, filename: str) -> RegisterAutomaton:
     with open(filename, "r", encoding="utf-8") as f:
         text = f.read()
         ra = RegisterAutomaton.from_text(text)
         # first normalise the automaton
         # print(ra.to_text())
-        print("Normalising the input RA...")
+        log_printer.info("Normalising the input RA...")
         normalised_ra = ra.get_normalised_dra()
         return normalised_ra
     
-def exectute_learner(inp_name:str, out_name:str) -> None:
+def execute_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None:
     # Parse input RA
-    target = parse_ra_file(inp_name)
-    print("Input file:", inp_name)
-    print("Target DRA-text:\n", target.to_text())
-    print("Target DRA-dot:\n", target.to_dot())
+    target = parse_ra_file(log_printer, inp_name)
+    log_printer.info("Input file:", inp_name)
+    log_printer.info("Target DRA-text:\n", target.to_text())
+    log_printer.debug("Target DRA-dot:\n", target.to_dot())
 
     teacher = Teacher(target)
     learner = RegisterAutomatonLearner(teacher, target.alphabet)
-    print(f"Initialisation ==============================================")
+    log_printer.info(f"Initialisation ==============================================")
     learner.start_learning()
-    learner.observation_table.pretty_print()
+    learner.observation_table.pretty_print(log_printer.info)
 
     hypothesis = None
     num_iterations = 1
     while True:
         hypothesis = learner.get_hypothesis()
-        print(f"Iteration {num_iterations} ==============================================")
-        print("Current observation table:\n")
-        learner.observation_table.pretty_print()
-        print("\nCurrent Hypothesis:\n", hypothesis.to_dot())
+        log_printer.info(f"Iteration {num_iterations} ==============================================")
+        log_printer.info("Current observation table:\n")
+        learner.observation_table.pretty_print(log_printer.info)
+        log_printer.debug("\nCurrent Hypothesis:\n", hypothesis.to_dot())
 
         equivalent, counterexample = teacher.equivalence_query(
             hypothesis)
 
         if equivalent :
             break
-        print("Counterexample found:", counterexample)
+        log_printer.info("Counterexample found:", counterexample)
         learner.refine_hypothesis(counterexample)
         num_iterations += 1
 
-    print(f"Learning completed ==============================================")
-    print("Final Hypothesis:\n")
-    print(hypothesis.to_dot())
-    print("Statistics:")
-    print("#MQ", teacher.num_membership_queries)
-    print("#EQ", teacher.num_equivalence_queries)
-    print("#MM", teacher.num_memorability_queries)
-    print("#States-target:", target.get_num_states())
-    print("#Trans-target:", target.get_num_trans())
-    print("#States-hypothesis:", hypothesis.get_num_states())
-    print("#Trans-hypothesis:", hypothesis.get_num_trans())
+    log_printer.info(f"Learning completed ==============================================")
+    log_printer.debug("Final Hypothesis:\n")
+    log_printer.debug(hypothesis.to_dot())
+    print("Query Statistics:")
+    print(f"#MQ: {teacher.num_membership_queries}")
+    print(f"#EQ: {teacher.num_equivalence_queries}")
+    print(f"#MM: {teacher.num_memorability_queries}")
+    print()
+    print("Target Automaton:")
+    print(f"#States: {target.get_num_states()}")
+    print(f"#Trans: {target.get_num_trans()}")
+    print()
+    print("Hypothesis Automaton:")
+    print(f"#States: {hypothesis.get_num_states()}")
+    print(f"#Trans: {hypothesis.get_num_trans()}")
+    
     # Write output RA
     if hypothesis is not None:
         with open(out_name, "w", encoding="utf-8") as f:
@@ -86,10 +92,22 @@ def main():
                         help='path to input DRA file')
     parser.add_argument('--out', metavar='path', required=True,
                         help='path to output DRA')
+    parser.add_argument('--verbose', type=int, choices=[0, 1, 2], default=1,
+                        help='verbose level: 0 silent, 1 normal, 2 debug')
+    parser.add_argument('--log', metavar='path', default='-', 
+                        help='path to log file (default: stdout)')
     args = parser.parse_args()
-
+    
+    # Set logging level
+    logger = SimpleLogger(
+        name="RALT",
+        level=LogLevel(args.verbose),
+        logfile=args.log if args.log != '-' else None,
+        stream=sys.stdout if args.log == '-' else None
+    )
+    log_printer = LogPrinter(logger.raw)
     # Parse input RA
-    exectute_learner(args.inp, args.out)
+    execute_learner(log_printer, args.inp, args.out)
 
 if __name__ == "__main__":
     main()

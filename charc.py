@@ -184,7 +184,7 @@ with open(file_name, 'r') as f:
     cs.compute_characteristic_sample()
     sample = rpni.Sample(cs.positives, cs.negatives)
     rpni = rpni.RegisterAutomatonRPNILearner(sample, dra.alphabet)
-    rpni.is_sample_mutable = False
+    rpni.is_sample_mutable = True
     A = rpni.learn()
     print(A.to_dot())
 

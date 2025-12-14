@@ -161,9 +161,9 @@ class ObservationTable:
     # -----------------------
     # Utilities
     # -----------------------
-    def pretty_print(self):
+    def pretty_print(self, log_printer=print):
         if not self.table_rows or not self.table_suffixes:
-            print("(empty table)")
+            log_printer("(empty table)")
             return
 
         col_labels = [str(c) for c in self.table_suffixes]
@@ -171,11 +171,11 @@ class ObservationTable:
         row_label_width = max(len(str((r.row_prefix, r.row_memorable))) for r in self.table_rows) + 2
 
         header = " " * row_label_width + "".join(f"{label:>{col_width}}" for label in col_labels)
-        print(header)
-        print("-" * len(header))
+        log_printer(header)
+        log_printer("-" * len(header))
 
         for row in self.table_rows:
             row_label = f"{(row.row_prefix, row.row_memorable)}"
             entries = [("✓" if row.get_entry(j) else "✗") for j in range(len(self.table_suffixes))]
             row_str = f"{row_label:<{row_label_width}}" + "".join(f"{e:>{col_width}}" for e in entries)
-            print(row_str)
+            log_printer(row_str)
