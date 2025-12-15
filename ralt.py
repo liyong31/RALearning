@@ -173,7 +173,7 @@ def parse_args():
     parser.add_argument('--inp', metavar='path', required=True,
                         help='path to input DRA/Sample file')
     parser.add_argument('--out', metavar='path', required=True,
-                        help='path to output DRA')
+                        help='path to output DRA/Sample file')
     
     # Verbosity / logging
     parser.add_argument('--verbose', type=int, choices=[0, 1, 2], default=1,

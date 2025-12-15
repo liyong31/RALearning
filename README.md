@@ -1,16 +1,76 @@
-# RALearning
+# RALT — Register Automata Learning Tool
 
-RALT (Register Automata Learning Tool) takes as input a deterministic register automaton (DRA) and learns its minimal canonical form using membership, equivalence and memorability queries.
+`ralt.py` is a command-line tool for learning **Deterministic Register Automata (DRA)** using active or passive learning techniques.
 
-Usage:
+## Usage:
 ```
-python3 ralt.py --inp ra2.txt --out ra.txt
+python ralt.py [-h] --inp path --out path [--verbose {0,1,2}] [--log path] [--rpni | --char]
 ``` 
 
-The tool reads a DRA from *ra2.txt* and learns a canonical, minimal, and well-typed DRA in *ra.txt*.
+## Mode Selection
 
-**Note**: RALT requires the input automaton to be both complete and well-typed DRA.
-These properties are necessary for executing words and for checking equivalence between configurations.
+You must choose exactly one of the following modes:
+
+### `--rpni`
+
+Enable **passive learning** mode.
+
+- The input file (`--inp`) is interpreted as a labeled sample.
+- The tool applies an RPNI-style algorithm to learn a consistent DRA.
+- The learned automaton is written to `--out`.
+
+### `--char`
+
+Enable **characteristic sample generation** mode.
+
+- The input file (`--inp`) is interpreted as a *complete* and *well-typed* DRA.
+- The tool computes and outputs a characteristic sample for that automaton.
+- The generated sample is written to `--out`.
+
+### `active`
+By default, we enable **active learning** mode if no mode options are available.
+
+- The input file (`--inp`) is interpreted as a *complete* and *well-typed* DRA.
+- The tool applies an active algorithm to learn a minimal and canonical DRA using membership, memorability and equivalence queries.
+- The learned automaton is written to `--out`.
+
+## Optional Arguments
+
+### `-h, --help`
+
+Show the help message and exit.
+
+### `--verbose {0,1,2}`
+
+Set the verbosity level of the program.
+
+- 0 — Silent mode (only critical errors)
+
+- 1 — Normal output (default)
+
+- 2 — Debug output (detailed internal information)
+
+### `--log path`
+
+Redirect all log output to the specified file instead of standard output.
+Useful for debugging or long-running experiments.
+
+## Examples
+Learning a DRA using active algorithm
+```
+python ralt.py --inp automaton.dra --out dra.txt
+```
+
+Learning a DRA using RPNI algorithm
+```
+python ralt.py --inp samples.txt --out learned.dra --rpni --verbose 1
+```
+
+Generate a characteristic sample from a complete and well-typed DRA
+```
+python ralt.py --inp automaton.dra --out sample.txt --char --verbose 2
+```
+
 
 
 ## The Register Automaton Input Format
