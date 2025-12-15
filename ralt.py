@@ -42,7 +42,7 @@ def execute_characteristic_sample_generation(log_printer: LogPrinter, inp_name:s
 
     from charc import CharacteristicSample
     alphabet = target.alphabet
-    cs = CharacteristicSample(target)
+    cs = CharacteristicSample(log_printer, target)
     log_printer.info("Computing characteristic sample...")
     cs.compute_characteristic_sample()
     
@@ -88,7 +88,7 @@ def execute_passive_learner(log_printer: LogPrinter, inp_name:str, out_name:str)
     log_printer.info(f"#Negative samples: {len(negatives)}")
     
     # Learn RA from sample
-    learner = RegisterAutomatonRPNILearner(sample, alphabet)
+    learner = RegisterAutomatonRPNILearner(log_printer, sample, alphabet)
     learner.is_sample_mutable = True
     log_printer.info("Learning RA from sample...")
     hypothesis = learner.learn()

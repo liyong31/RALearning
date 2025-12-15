@@ -6,6 +6,7 @@ from dra import RegisterAutomaton
 from alphabet import LetterSeq, Letter, Alphabet
 import teacher
 import rpni
+from log import LogPrinter # type: ignore
 
 
 Config = Tuple[int, LetterSeq, Letter]
@@ -13,7 +14,8 @@ Config = Tuple[int, LetterSeq, Letter]
 # ---------- Data structure for characteristic sample ----------
 # generate samples for RPNI learning
 class CharacteristicSample:
-    def __init__(self, dra: RegisterAutomaton):
+    def __init__(self, log_printer: LogPrinter, dra: RegisterAutomaton):
+        self.log_printer = log_printer
         self.dra = dra
         self.positives = []
         self.negatives = []
@@ -90,8 +92,8 @@ class CharacteristicSample:
         state_reprs = self.get_state_representatives()
         for _, repr, _ in state_reprs:
             st.add(repr)
-        # print("===================== st")
-        # print(st)
+        self.log_printer.debug("===================== st")
+        self.log_printer.debug(st)
         # 2) Build Tr: for each w in St and each a in mem(w) and first non-mem minimal a,
         #    include wa and wd as described in Definition 15.
         tr = set()
@@ -102,10 +104,8 @@ class CharacteristicSample:
                 ub = u.append(b)
                 tr.add(ub)
                 # tr_info.add((ub, u, reg))
-        # print("===================== tr")
-        # print(tr)
-        # print(tr_info)
-            
+        self.log_printer.debug("===================== tr")
+        self.log_printer.debug(tr)            
 
         # 3) Build Mem: for all w in Tr, for all a in mem(w) we must find b and suffix u
         #    such that wu ≃ (wu)[a/b], they differ in acceptance w.r.t. replacing a by b, and both in Mem.
@@ -132,8 +132,11 @@ class CharacteristicSample:
                 mem.add(u.concat(w))
                 b2a_map = up.get_bijective_map(u)
                 mem.add(u.concat(self.dra.alphabet.apply_map(w, b2a_map)))
+                self.log_printer.debug("===================== memorable u,w,a,b")
+                self.log_printer.debug(u, w, a, b)
                 # print(mem)
-        
+        self.log_printer.debug("===================== mem")
+        self.log_printer.debug(mem)
         # 4) Build D: distinguishers for non-equivalent states with same mem size
         #    For each pair of representatives u in St and z in Tr with same mem size and not ≡_L,
         #    find suffixes ww' and zz' showing difference and record them in D.
@@ -146,24 +149,31 @@ class CharacteristicSample:
                 v_configs = self.dra.run(v)
                 v_id, v_reg, _ = v_configs[-1]
                 if u_id == v_id:
-                    # equivalent
+                    # equivalent, no need to distinguish
                     continue
-                # need to have same type ?
-                if len(u_reg) != len(v_reg):
+                # memorable words not the same type, u and v already in samples
+                if not self.dra.alphabet.test_type(u_reg, v_reg):
                     continue
-                # if not dra.alphabet.test_type(u_reg, v_reg):
-                #     continue
                 # now, find difference
-                # print(f"find difference between ({u}, {u_reg}) and ({v}, {v_reg})")
-                w = teacher.find_difference(self.dra, u, self.dra, v, None)
+                self.log_printer.debug(f"find difference between ({u}, {u_reg}) and ({v}, {v_reg})")
+                # since they have the same type, make a map
+                u2v_map = u_reg.get_bijective_map(v_reg)
+                v2u_map = v_reg.get_bijective_map(u_reg)
+                u_mapped = self.dra.alphabet.apply_map(u, u2v_map)
+                w = teacher.find_difference(self.dra, u_mapped, self.dra, v, None)
                 assert w is not None, f" {w} should not be none"
-                # uw in L </-> vw in L
-                
-                D.add(u.concat(w))
+                # D(u)w in L </-> vw in L
+                # uD^{-1}(w) in L </-> v w in L
+                w_inverse = self.dra.alphabet.apply_map(w, v2u_map)
+                D.add(u.concat(w_inverse))
                 D.add(v.concat(w))
-                # print("===========================")
-                # print(f"distinguish {u} and {v} : {w}")
-                # print(D)
+                self.log_printer.debug("===========================")
+                self.log_printer.debug(f"distinguish {u} and {v} : {w}")
+                self.log_printer.debug(f"distinguish uw^{-1}: {u} {w_inverse}")
+                self.log_printer.debug(f"distinguish vw: {u} {w_inverse}")
+        self.log_printer.debug("===================== D")
+        self.log_printer.debug(D)
+        # 5) Build final positive/negative samples
         # Finally, intersect with positive/negative sets is the learner's job; we just return these sets
         all_samples = st.union(tr)
         all_samples = all_samples.union(mem)

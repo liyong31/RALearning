@@ -7,7 +7,8 @@
 from collections import defaultdict, deque
 from dra import RegisterAutomaton, Transition
 from alphabet import Alphabet, LetterType, LetterSeq, Letter, comp_id, comp_lt
-
+from log import LogPrinter, LogLevel, SimpleLogger # type: ignore
+import sys
 
 # length-lexicographic comparison
 def ll_compare(u, v):
@@ -49,7 +50,8 @@ class Sample:
 
 # ---------- RPNI learning algorithm ----------
 class RegisterAutomatonRPNILearner:
-    def __init__(self, sample: Sample, alphabet: Alphabet):
+    def __init__(self, log_printer: LogPrinter, sample: Sample, alphabet: Alphabet):
+        self.log_printer = log_printer
         self.sample = sample
         self.alphabet = alphabet
         # add mutable samples for optimization in s-completability check
@@ -95,15 +97,16 @@ class RegisterAutomatonRPNILearner:
         readable.add(tuple())  # empty word readable
         self.num_iters = 0
         while to_read:
-            # print(
-            #     f"====================== iteration {self.num_iters} ======================"
-            # )
+            self.log_printer.debug(
+                f"====================== iteration {self.num_iters} ======================"
+            )
+            self.log_printer.debug("Hypothesis:\n", A.to_dot())
             ua = to_read.popleft()
             # find u and a such that ua = u + (a,)
             u = ua[:-1]
             a = ua[-1]
-            # print("u", u)
-            # print("a", a)
+            self.log_printer.debug("u", u)
+            self.log_printer.debug("a", a)
             # ensure A can read u (paper guarantees S-completability ensures this)
             u_seq = self.alphabet.make_sequence(list(u))
             # u is guaranteed with a run
@@ -127,7 +130,7 @@ class RegisterAutomatonRPNILearner:
                 reg_size_map[t.target] = reg_size_map[st] + 1 - len(t.indices_to_remove)
 
             A.add_transition(t.source, t.tau, t.indices_to_remove, t.target)
-            # print("added transition: ", t)
+            self.log_printer.debug("added transition: ", t)
             # update readable and to_read: remove prefixes that are now readable; mark final states for pos words
             # first, check whether ua is accepting
             if self.search(self.alphabet, ua_seq, self.sample):
@@ -138,7 +141,7 @@ class RegisterAutomatonRPNILearner:
             for w in list(to_read):
                 w_seq = self.alphabet.make_sequence(list(w))
                 succesful, state = A.has_run(w_seq)
-                # print(f" {w} has arun: ", succesful, state)
+                self.log_printer.debug(f" {w} has arun: ", succesful, state)
                 if succesful:
                     # GUARANTEE 3: A is (Pos\to_read, Neg)-consistent
                     if self.search(self.alphabet, w_seq, self.sample):
@@ -166,7 +169,6 @@ class RegisterAutomatonRPNILearner:
                 self.mutable_pairs -= pos_neg_to_remove
         # print(f"Learning finished in {self.num_iters} iterations.")
         # print(f"====================== iteration {self.num_iters} ======================")
-        # print(A.to_dot())
         return A
 
     # ---------- SET_TRANSITION  ----------
@@ -222,7 +224,7 @@ class RegisterAutomatonRPNILearner:
             if reg_size_map[p] != new_reg_size:
                 continue
             Aprime = A.clone()
-            # print(f"Trying to set transition ({q}, {tau}, {to_erase}, {p})")
+            self.log_printer.debug(f"Trying to set transition ({q}, {tau}, {to_erase}, {p})")
             Aprime.add_transition(q, tau, to_erase, p)
             if self.s_completable(Aprime, sample):
                 return Transition(q, tau, to_erase, p)
@@ -260,7 +262,7 @@ class RegisterAutomatonRPNILearner:
         # s.t. (q0, ε) -> w1 -> (q, s) and (q0, ε) -> z1 -> (q, s') with sw2 \sim_R s'z2
         # TODO q has a fixed length of register values, so |w2| = |z2|
         for (w, z) in self.mutable_pairs: 
-            # print(f"compare {w} and {z}")
+            self.log_printer.debug(f"compare {w} and {z}")
             w_seq = A.alphabet.make_sequence(list(w))
             # now we fix a state and a suffix for w
             w_state = A.get_initial()
@@ -279,6 +281,7 @@ class RegisterAutomatonRPNILearner:
                 # first, w_suffix and z_suffix cannot be same type at the beginning
                 for j in range(-1, len(z_seq)):
                     # if both are do not reading anything, skip
+                    self.log_printer.debug(f"z_state: {z_state}, z_reg: {z_reg}")
                     if j == -1 and len(w_suffix) == len(w_seq):
                         # j == -1 means no letter is read yet for
                         continue
@@ -286,7 +289,10 @@ class RegisterAutomatonRPNILearner:
                         z_config = (z_state, z_reg, None)
                     else:
                         z_config = A.step((z_state, z_reg, None), z_seq.letters[j])
-                        z_suffix = z_seq.get_suffix(j + 1)
+                    z_suffix = z_seq.get_suffix(j + 1)
+                    # when z_config is None, means cannot reach next state
+                    # hence, 
+                    self.log_printer.debug(f"z_config: {z_config}")
                     # not possible to reach next state, abort
                     if z_config is None:
                         break
@@ -303,6 +309,12 @@ class RegisterAutomatonRPNILearner:
                     # reach the same state from q0
                     w_type = w_reg.concat(w_suffix)
                     z_type = z_reg.concat(z_suffix)
+                    self.log_printer.debug(f"w_reg: {w_reg}")
+                    self.log_printer.debug(f"w_suffix: {w_suffix}")
+                    self.log_printer.debug(f"z_reg: {z_reg}")
+                    self.log_printer.debug(f"z_suffix: {z_suffix}")
+                    self.log_printer.debug(f"w_type: {w_type}")
+                    self.log_printer.debug(f"z_type: {z_type}")
                     if A.alphabet.test_type(w_type, z_type):
                         return False
                 # proceed to next z
