@@ -39,16 +39,14 @@ def find_difference(
 
     # ---- Step 2: BFS over configuration pairs ----
     # Each element in the queue is ((loc1, reg1), (loc2, reg2), w_prefix)
+    already_queued = set()
     queue = deque([((loc_u, reg_u), (loc_v, reg_v), [])])
-    visited = set()
+    already_queued.add((loc_u, tuple(reg_u.letters), loc_v, tuple(reg_v.letters)))
 
     while queue:
         (l1, r1), (l2, r2), w_prefix = queue.popleft()
-        # Avoid revisiting
-        key = (l1, tuple(r1.letters), l2, tuple(r2.letters))
-        if key in visited:
-            continue
-        visited.add(key)
+        # already_queued makes sure we do not revisit
+        # key = (l1, tuple(r1.letters), l2, tuple(r2.letters))
 
         # ---- Step 3: Explore all possible next-letter transitions ----
         # For correctness, we symbolically explore all combinations of next transitions
@@ -61,44 +59,52 @@ def find_difference(
         # print("next_letters ", next_letters)
         for next_letter in next_letters:
             for t1 in A.locations[l1].transitions:
+                input_tau1 = r1.append(next_letter)
+                # skip if letter does not satisfy transition guard
+                if not A.alphabet.test_type(input_tau1, t1.tau):
+                    continue
                 for t2 in B.locations[l2].transitions:
                     # print("chosen letter ", next_letter)
-                    input_tau1 = r1.append(next_letter)
                     input_tau2 = r2.append(next_letter)
-                    if A.alphabet.test_type(
-                        input_tau1, t1.tau
-                    ) and A.alphabet.test_type(input_tau2, t2.tau):
-                        new_r1 = input_tau1.remove_by_indices(t1.indices_to_remove)
-                        new_r2 = input_tau2.remove_by_indices(t2.indices_to_remove)
-                        new_w = w_prefix + [next_letter]
-                        # If one configuration is accepting and the other is not → found distinguishing w
-                        if (
-                            A.locations[t1.target].accepting
-                            != B.locations[t2.target].accepting
-                        ):
-                            return A.alphabet.form_sequence(new_w)
-                        # if replace_map is not None:
-                        #     w = A.alphabet.form_sequence(new_w)
-                        #     mapped_w = A.alphabet.apply_map(w, replace_map)
-                        #     u_w = u.concat(w)
-                        #     v_mapped_w = v.concat(mapped_w)
-                        #     if not A.alphabet.test_type(u_w, v_mapped_w):
-                        #         continue
-                        if (
-                            t1.target not in sink_locs_A or t2.target not in sink_locs_B
-                        ) and can_add_to_queue(
-                            A,
-                            visited,
-                            (
-                                t1.target,
-                                tuple(new_r1.letters),
-                                t2.target,
-                                tuple(new_r2.letters),
-                            ),
-                        ):
-                            queue.append(
-                                ((t1.target, new_r1), (t2.target, new_r2), new_w)
-                            )
+                    if not A.alphabet.test_type(input_tau2, t2.tau):
+                        continue
+                    new_r1 = input_tau1.remove_by_indices(t1.indices_to_remove)
+                    new_r2 = input_tau2.remove_by_indices(t2.indices_to_remove)
+                    new_w = w_prefix + [next_letter]
+                    # If one configuration is accepting and the other is not → found distinguishing w
+                    if (
+                        A.locations[t1.target].accepting
+                        != B.locations[t2.target].accepting
+                    ):
+                        return A.alphabet.form_sequence(new_w)
+                    # if replace_map is not None:
+                    #     w = A.alphabet.form_sequence(new_w)
+                    #     mapped_w = A.alphabet.apply_map(w, replace_map)
+                    #     u_w = u.concat(w)
+                    #     v_mapped_w = v.concat(mapped_w)
+                    #     if not A.alphabet.test_type(u_w, v_mapped_w):
+                    #         continue
+                    if (
+                        t1.target not in sink_locs_A or t2.target not in sink_locs_B
+                    ) and can_add_to_queue(
+                        A,
+                        already_queued,
+                        (
+                            t1.target,
+                            tuple(new_r1.letters),
+                            t2.target,
+                            tuple(new_r2.letters),
+                        ),
+                    ):
+                        queue.append(
+                            ((t1.target, new_r1), (t2.target, new_r2), new_w)
+                        )
+                        already_queued.add((
+                            t1.target,
+                            tuple(new_r1.letters),
+                            t2.target,
+                            tuple(new_r2.letters)
+                        ))
 
     # No distinguishing word found
     return None
@@ -113,11 +119,11 @@ Key_Type = Tuple[
 
 
 def can_add_to_queue(
-    target: RegisterAutomaton, visited: Set[Key_Type], key: Key_Type
+    target: RegisterAutomaton, queued: Set[Key_Type], key: Key_Type
 ) -> bool:
-    if key in visited:
+    if key in queued:
         return False
-    for existing_key in visited:
+    for existing_key in queued:
         l1_e, r1_e, l2_e, r2_e = existing_key
         l1_k, r1_k, l2_k, r2_k = key
         r1_seq_e = target.alphabet.form_sequence(list(r1_e))
