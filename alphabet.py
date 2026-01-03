@@ -82,6 +82,11 @@ class LetterSeq:
         if self.letter_type and letter.letter_type != self.letter_type:
             raise ValueError("Cannot append a letter of mismatched type")
         return LetterSeq(self.letters + [letter])
+    
+    def preappend(self, letter: Letter) -> "LetterSeq":
+        if self.letter_type and letter.letter_type != self.letter_type:
+            raise ValueError("Cannot append a letter of mismatched type")
+        return LetterSeq([letter] + self.letters)
 
     def remove_by_indices(self, indices: Set[int]) -> "LetterSeq":
         remaining = [l for i, l in enumerate(self.letters) if i not in indices]

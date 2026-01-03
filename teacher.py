@@ -137,10 +137,7 @@ def can_add_to_queue(
                 return False
     return True
 
-def get_memorable_witness(target: RegisterAutomaton
-                          , u: LetterSeq
-                          , u_sorted: LetterSeq
-                          , a: Letter):
+def get_near_b_letter(target: RegisterAutomaton, u_sorted: LetterSeq, a: Letter) -> Letter:
     index = u_sorted.index(a)
     b = None
     if index == 0:
@@ -149,24 +146,40 @@ def get_memorable_witness(target: RegisterAutomaton
         b = target.alphabet.make_letter(a.value + 0.5)
     else:
         b = target.alphabet.make_letter((a.value + u_sorted[index + 1].value) / 2.0)
+    return b
 
+def get_near_seq(target: RegisterAutomaton
+                 , u: LetterSeq
+                 , u_sorted: LetterSeq
+                 , a: Letter) -> Tuple[Letter, LetterSeq]:
+    b = get_near_b_letter(target, u_sorted, a)
     # we try to replace b with a, and check whether map(u) and u can be distinguished by some v
     def replace_a_with_b(c: Letter) -> Letter:
         if c == a:
             return b
         else:
             return c
-
     uprime = target.alphabet.apply_map(u, replace_a_with_b)
+    return (b, uprime)
+
+def get_memorable_witness(target: RegisterAutomaton
+                          , u: LetterSeq
+                          , u_sorted: LetterSeq
+                          , a: Letter):
+    
+    b, uprime = get_near_seq(target, u, u_sorted, a)
     # 1. find distinguished word
     # print("u ", u, "up ", uprime)
-    suffix = find_difference(target, u, target, uprime, replace_map=replace_a_with_b)
+    suffix = find_difference(target, u, target, uprime, None)
     # find_distinguishing_seq(target, u, uprime, a, replace_a_with_b)
     return (suffix, b, uprime)
 
+def get_sorted_seq(u : LetterSeq):
+    return sorted(set(u.letters), key=lambda x: x.value)
+
 def get_memorable_seq(target: RegisterAutomaton, u: LetterSeq):
     # bs = u.get_letter_extension(target.alphabet.comparator)
-    u_sorted = sorted(set(u.letters), key=lambda x: x.value)
+    u_sorted = get_sorted_seq(u)
     memorables = set()
 
     for a in u.letters:

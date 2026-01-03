@@ -60,6 +60,11 @@ def execute_characteristic_sample_generation(log_printer: LogPrinter, inp_name:s
         for neg in cs.negatives:
             f.write("neg: " + " ".join(str(v) for v in neg) + "\n")
     log_printer.info(f"Characteristic sample written to {out_name}.")
+    log_printer.force("Generation Statistics:")
+    log_printer.force(f"#MAX-LEN: {cs.max_length}")
+    log_printer.force(f"#AVG-LEN: {cs.avg_length}")
+    log_printer.force(f"#POS: {len(cs.positives)}")
+    log_printer.force(f"#NEG: {len(cs.negatives)}")
     
 def execute_passive_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None:
     # Parse input sample
@@ -96,7 +101,10 @@ def execute_passive_learner(log_printer: LogPrinter, inp_name:str, out_name:str)
     # Write output RA
     with open(out_name, "w", encoding="utf-8") as f:
         f.write(hypothesis.to_text())
-    log_printer.info(f"Hypothesis RA written to {out_name}")   
+    log_printer.info(f"Hypothesis RA written to {out_name}") 
+    log_printer.force("Hypothesis Automaton:")
+    log_printer.force(f"#States: {hypothesis.get_num_states()}")
+    log_printer.force(f"#Trans: {hypothesis.get_num_trans()}")  
     
 def execute_active_learner(log_printer: LogPrinter, inp_name:str, out_name:str) -> None:
     # Parse input RA

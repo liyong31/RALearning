@@ -19,6 +19,8 @@ class CharacteristicSample:
         self.dra = dra
         self.positives = []
         self.negatives = []
+        self.max_length = 0
+        self.avg_length = 0.0
 
     # ASSUMPTION: the input dra must be well-typed and complete
     def one_step_configs(
@@ -178,8 +180,12 @@ class CharacteristicSample:
         all_samples = st.union(tr)
         all_samples = all_samples.union(mem)
         all_samples = all_samples.union(D)
+        ttl_length = 0
         for w in all_samples:
+            ttl_length += len(w.letters)
+            self.max_length = max(self.max_length, len(w.letters))
             if self.dra.is_accepted(w):
                 self.positives.append([ l.value for l in w.letters])
             else:
                 self.negatives.append([ l.value for l in w.letters])
+        self.avg_length = ttl_length / len(all_samples) if len(all_samples) > 0 else 0.0
