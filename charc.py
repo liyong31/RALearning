@@ -4,9 +4,10 @@ from typing import List, Set, Dict, Tuple, Optional
 
 from dra import RegisterAutomaton
 from alphabet import LetterSeq, Letter, Alphabet
-import teacher
+import witness
 import rpni
 from log import LogPrinter # type: ignore
+from sortset import SortedSet
 
 
 Config = Tuple[int, LetterSeq, Letter]
@@ -21,6 +22,13 @@ class CharacteristicSample:
         self.negatives = []
         self.max_length = 0
         self.avg_length = 0.0
+        self.witness_finder = None
+        
+    def set_witness_finder(self, use_backward_finder: witness.WitnessFinder):
+        if use_backward_finder:
+            self.witness_finder = witness.DistinguishCheckWitnessFinder(self.log_printer, self.dra)
+        else:
+            self.witness_finder = witness.EqCheckWitnessFinder(self.log_printer, self.dra)
 
     # ASSUMPTION: the input dra must be well-typed and complete
     def one_step_configs(
@@ -87,18 +95,21 @@ class CharacteristicSample:
         - max_search_len: search bound for suffixes/distinguishers (practical bound; paper proves poly-size exists)
         Returns: dict with keys 'St','Tr','Mem','D' each mapping to set of words (tuples)
         """
-
+        self.log_printer.debug("DRA:\n", self.dra.to_dot())
         # Build St: choose for each ≡_L-class (we approximate by distinct configs)
         # The paper's St is over equivalence classes; practical approach: take one rep per reachable state/config
-        st = set()
+        st = SortedSet()
         state_reprs = self.get_state_representatives()
+        self.log_printer.debug("===================== repr")
+        self.log_printer.debug(state_reprs)
+        
         for _, repr, _ in state_reprs:
             st.add(repr)
-        self.log_printer.debug("===================== st")
+        self.log_printer.debug(f"===================== st, , {len(st)}")
         self.log_printer.debug(st)
         # 2) Build Tr: for each w in St and each a in mem(w) and first non-mem minimal a,
         #    include wa and wd as described in Definition 15.
-        tr = set()
+        tr = SortedSet()
         # tr_info = set()
         for _, u, reg in state_reprs:
             bs = reg.get_letter_extension(self.dra.alphabet.comparator)
@@ -106,75 +117,38 @@ class CharacteristicSample:
                 ub = u.append(b)
                 tr.add(ub)
                 # tr_info.add((ub, u, reg))
-        self.log_printer.debug("===================== tr")
+        self.log_printer.debug(f"===================== tr, {len(tr)}")
         self.log_printer.debug(tr)            
 
         # 3) Build Mem: for all w in Tr, for all a in mem(w) we must find b and suffix u
         #    such that wu ≃ (wu)[a/b], they differ in acceptance w.r.t. replacing a by b, and both in Mem.
         # Practical heuristic: search for small u and b such that acceptance differs when we replace at positions of 'a' in suffix.
-        mem = set()
+        mem = SortedSet()
         for u in tr:
             # first, obtain the memorable sequence
             configs = self.dra.run(u)
-            _, reg, _ = configs[-1]
-            u_sorted = sorted(set(u.letters), key=lambda x: x.value)        
-            
+            _, reg, _ = configs[-1]            
             for a in reg.letters:
-                w, b, up = teacher.get_memorable_witness(self.dra, u, u_sorted, a)
-                # print("u ", u)
-                # print("b ", b)
-                # print("a ", a)
-                # print("w ", w)
-                # print("reg ", reg)
-                assert w is not None, f"{a} is not memorable in {u}"
-                # a_idx = w.index(a)
-                # w must contain either a or b
-                # if a_idx >= 0:
-                # uw, u[a/b]w not equal
-                mem.add(u.concat(w))
-                b2a_map = up.get_bijective_map(u)
-                mem.add(u.concat(self.dra.alphabet.apply_map(w, b2a_map)))
-                self.log_printer.debug("===================== memorable u,w,a,b")
-                self.log_printer.debug(u, w, a, b)
+                (uw1, uw2) = self.witness_finder.get_memorable_witness(u, a)
+                mem.add(uw1)
+                mem.add(uw2)
                 # print(mem)
-        self.log_printer.debug("===================== mem")
+        self.log_printer.debug(f"===================== mem, {len(mem)}")
         self.log_printer.debug(mem)
         # 4) Build D: distinguishers for non-equivalent states with same mem size
         #    For each pair of representatives u in St and z in Tr with same mem size and not ≡_L,
         #    find suffixes ww' and zz' showing difference and record them in D.
-        D = set()
+        D = SortedSet()
         for u in st:
-            u_configs = self.dra.run(u)
-            u_id, u_reg, _ = u_configs[-1]
             for v in tr:
-                # we now need to check whether this two reach the same state
-                v_configs = self.dra.run(v)
-                v_id, v_reg, _ = v_configs[-1]
-                if u_id == v_id:
-                    # equivalent, no need to distinguish
-                    continue
-                # memorable words not the same type, u and v already in samples
-                if not self.dra.alphabet.test_type(u_reg, v_reg):
-                    continue
-                # now, find difference
-                self.log_printer.debug(f"find difference between ({u}, {u_reg}) and ({v}, {v_reg})")
-                # since they have the same type, make a map
-                u2v_map = u_reg.get_bijective_map(v_reg)
-                v2u_map = v_reg.get_bijective_map(u_reg)
-                u_mapped = self.dra.alphabet.apply_map(u, u2v_map)
-                w = teacher.find_difference(self.dra, u_mapped, self.dra, v, None)
-                assert w is not None, f" {w} should not be none"
-                # D(u)w in L </-> vw in L
-                # uD^{-1}(w) in L </-> v w in L
-                w_inverse = self.dra.alphabet.apply_map(w, v2u_map)
-                D.add(u.concat(w_inverse))
-                D.add(v.concat(w))
-                self.log_printer.debug("===========================")
-                self.log_printer.debug(f"distinguish {u} and {v} : {w}")
-                self.log_printer.debug(f"distinguish uw^{-1}: {u} {w_inverse}")
-                self.log_printer.debug(f"distinguish vw: {u} {w_inverse}")
-        self.log_printer.debug("===================== D")
+                res = self.witness_finder.get_distinguish_witness(u, v)
+                if res is not None:
+                    D.add(res[0])
+                    D.add(res[1])
+
+        self.log_printer.debug(f"===================== D, {len(D)}")
         self.log_printer.debug(D)
+        self.log_printer.info("total samples generated ", len(st) + len(tr) + len(mem) + len(D))
         # 5) Build final positive/negative samples
         # Finally, intersect with positive/negative sets is the learner's job; we just return these sets
         all_samples = st.union(tr)

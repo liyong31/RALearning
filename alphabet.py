@@ -1,6 +1,6 @@
 from fractions import Fraction
 from typing import List, Set, Dict, Union, Tuple, Callable
-
+import math
 # -------------------------------
 #     TYPE ALIASES
 # -------------------------------
@@ -33,9 +33,23 @@ class Letter:
         self.letter_type = letter_type
 
     def __eq__(self, other):
-        return isinstance(other, Letter) and (
-            self.letter_type == other.letter_type and self.value == other.value
-        )
+        if not isinstance(other, Letter):
+            return False
+
+        if self.letter_type is not other.letter_type:
+            return False
+
+        v1 = self.value
+        v2 = other.value
+
+        if self.letter_type is LetterType.RATIONAL:
+            return v1 == v2
+
+        if self.letter_type is LetterType.REAL:
+            return math.isclose(v1, v2, rel_tol=1e-12, abs_tol=0.0)
+
+        # Fallback for any other exact types
+        return v1 == v2
     
     def __lt__(self, other):
         if not isinstance(other, Letter):
@@ -109,6 +123,27 @@ class LetterSeq:
 
     def __repr__(self):
         return "[" + ", ".join(repr(l) for l in self.letters) + "]"
+    
+    # length-lexicographic
+    def __lt__(self, other):
+        """
+        Returns:
+            -1 if u < v (length-lexicographic)
+            0 if u == v
+            1 if u > v
+        """
+        if not isinstance(other, LetterSeq):
+            return NotImplemented
+        # Compare by length
+        if len(self) < len(other):
+            return True
+        if len(self) > len(other):
+            return False
+        # Lengths equal → lexicographic comparison
+        if self.letters < other.letters:
+            return True
+        else:
+            return False
 
     # --- Utilities ---
     def get_prefix(self, length: int) -> "LetterSeq":

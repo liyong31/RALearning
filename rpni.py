@@ -141,7 +141,7 @@ class RegisterAutomatonRPNILearner:
             for w in list(to_read):
                 w_seq = self.alphabet.make_sequence(list(w))
                 succesful, state = A.has_run(w_seq)
-                self.log_printer.debug(f" {w} has arun: ", succesful, state)
+                self.log_printer.debug(f" {w} has a run: ", succesful, state)
                 if succesful:
                     # GUARANTEE 3: A is (Pos\to_read, Neg)-consistent
                     if self.search(self.alphabet, w_seq, self.sample):

@@ -1,7 +1,9 @@
 
 import sys
 from dra import RegisterAutomaton
-from teacher import find_difference
+from diff import find_difference
+
+
 
 def main():
     if len(sys.argv) != 3:

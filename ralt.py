@@ -33,7 +33,8 @@ class Mode(Enum):
 # Learner execution
 # ---------------------------
 
-def execute_characteristic_sample_generation(log_printer: LogPrinter, inp_name:str, out_name:str) -> None:
+def execute_characteristic_sample_generation(log_printer: LogPrinter
+                    , use_bs_finder: bool, inp_name:str, out_name:str) -> None:
     # Parse input RA
     target = parse_ra_file(log_printer, inp_name)
     log_printer.info("Input file:", inp_name)
@@ -43,6 +44,7 @@ def execute_characteristic_sample_generation(log_printer: LogPrinter, inp_name:s
     from charc import CharacteristicSample
     alphabet = target.alphabet
     cs = CharacteristicSample(log_printer, target)
+    cs.set_witness_finder(use_bs_finder)
     log_printer.info("Computing characteristic sample...")
     cs.compute_characteristic_sample()
     
@@ -61,8 +63,8 @@ def execute_characteristic_sample_generation(log_printer: LogPrinter, inp_name:s
             f.write("neg: " + " ".join(str(v) for v in neg) + "\n")
     log_printer.info(f"Characteristic sample written to {out_name}.")
     log_printer.force("Generation Statistics:")
-    log_printer.force(f"#MAX-LEN: {cs.max_length}")
-    log_printer.force(f"#AVG-LEN: {cs.avg_length}")
+    log_printer.force(f"#MAX-LEN: {cs.max_length:.2f}")
+    log_printer.force(f"#AVG-LEN: {cs.avg_length:.2f}")
     log_printer.force(f"#POS: {len(cs.positives)}")
     log_printer.force(f"#NEG: {len(cs.negatives)}")
     
@@ -160,13 +162,13 @@ def execute_active_learner(log_printer: LogPrinter, inp_name:str, out_name:str) 
         log_printer.error("No hypothesis generated.", file=sys.stderr)
         sys.exit(1)
 
-def execute_learner(log_printer: LogPrinter, mode: Mode, inp_name:str, out_name:str) -> None:
+def execute_learner(log_printer: LogPrinter, mode: Mode, inp_name:str, out_name:str, use_bs_finder:bool) -> None:
     if mode == Mode.ACTIVE:
         execute_active_learner(log_printer, inp_name, out_name)
     elif mode == Mode.PASSIVE:
         execute_passive_learner(log_printer, inp_name, out_name)
     elif mode == Mode.CHAR:
-        execute_characteristic_sample_generation(log_printer, inp_name, out_name)
+        execute_characteristic_sample_generation(log_printer, use_bs_finder, inp_name, out_name)
     else:
         log_printer.error("Unknown mode.")
         sys.exit(1) 
@@ -195,7 +197,15 @@ def parse_args():
                        help='Use passive learning for the samples in the input file')
     group.add_argument('--char', action='store_true',
                        help='Generate characteristic sample file from input DRA')
+    
+    # Witness generation method
+    parser.add_argument('--bs', action='store_true',
+                        help='Backward search for witnesses in sample generation (only valid with --char)')
     args = parser.parse_args()
+
+    if args.bs is True and not args.char:
+        parser.error("--bs can only be used together with --char")
+        
     return args
 
 
@@ -223,7 +233,7 @@ def main():
     log_printer = LogPrinter(logger.raw)
     
     # Execute learner
-    execute_learner(log_printer, mode, args.inp, args.out)
+    execute_learner(log_printer, mode, args.inp, args.out, args.bs)
 
 if __name__ == "__main__":
     main()
