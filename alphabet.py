@@ -158,6 +158,9 @@ class LetterSeq:
             return LetterSeq.empty(self.letter_type)
         return LetterSeq(self.letters[start_index:])
     
+    def __iter__(self):
+        return iter(self.letters)
+    
     # inside LetterSeq class
     def get_letter_extension(self, comparator: Callable[['Letter', 'Letter'], bool]) -> 'LetterSeq':
         """
